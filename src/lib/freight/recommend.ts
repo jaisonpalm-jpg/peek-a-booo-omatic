@@ -111,7 +111,7 @@ export function recommend(pieces: Piece[]): Recommendation {
   // Score each trailer that fits; compute linear ft based on that trailer's deck width.
   const candidates = TRAILERS.filter((t) => trailerFits(t, validPieces)).map((t) => {
     const linearFt = linearFtRequired(validPieces, t.deckWidth);
-    const capacityFt = (t.deckLength + t.maxOverhang) / 12;
+    const capacityFt = t.deckLength / 12;
     const utilizationPct = capacityFt > 0 ? Math.min(100, (linearFt / capacityFt) * 100) : 0;
     return { trailer: t, utilizationPct, linearFt };
   });
