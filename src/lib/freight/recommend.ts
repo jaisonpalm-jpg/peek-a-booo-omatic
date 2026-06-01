@@ -159,6 +159,14 @@ export function recommend(pieces: Piece[]): Recommendation {
     totals,
     oversize,
     utilizationPct: best?.utilizationPct ?? 0,
+    deckAreaPct: best
+      ? Math.min(
+          100,
+          (totals.deckAreaFt2 /
+            ((best.trailer.deckLength * best.trailer.deckWidth) / 144)) *
+            100,
+        )
+      : 0,
     withinLegalLimits: oversize.length === 0,
     notes,
   };
