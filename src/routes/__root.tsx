@@ -91,6 +91,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { name: "twitter:title", content: "LoadFit — Freight Trailer Estimator" },
+      { name: "description", content: "This application analyzes building sheets to estimate truck requirements and generate load summaries." },
+      { property: "og:description", content: "This application analyzes building sheets to estimate truck requirements and generate load summaries." },
+      { name: "twitter:description", content: "This application analyzes building sheets to estimate truck requirements and generate load summaries." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d0a428eb-bac6-4add-b016-50a16987e0f1/id-preview-1eb0ff20--fa8425d5-9c3f-4bc3-88a4-246fbca2c20c.lovable.app-1780282420052.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d0a428eb-bac6-4add-b016-50a16987e0f1/id-preview-1eb0ff20--fa8425d5-9c3f-4bc3-88a4-246fbca2c20c.lovable.app-1780282420052.png" },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
