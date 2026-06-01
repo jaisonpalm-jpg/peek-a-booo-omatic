@@ -57,6 +57,11 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
             unit="ft"
           />
           <Stat
+            label="Deck Area"
+            value={fmt(totals.deckAreaFt2, 1)}
+            unit="ft²"
+          />
+          <Stat
             label="Longest"
             value={fmt(totals.longestIn / 12, 1)}
             unit="ft"
