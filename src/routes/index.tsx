@@ -114,16 +114,7 @@ function EstimatorPage() {
         </header>
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-          {/* Mobile-only jobs trigger */}
-          <div className="lg:hidden mb-4">
-            <JobsSidebar
-              jobs={jobs}
-              activeId={activeId}
-              onSelect={selectJob}
-              onCreate={() => createJob("Untitled Job")}
-              onDelete={deleteJob}
-            />
-          </div>
+
 
           {!activeJob ? (
             <div className="py-24 text-center">
