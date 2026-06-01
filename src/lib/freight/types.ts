@@ -21,6 +21,7 @@ export interface EffectiveDims {
 }
 
 export type TrailerId =
+  | "box-16"
   | "box-26"
   | "dryvan-53"
   | "flatbed-48"
