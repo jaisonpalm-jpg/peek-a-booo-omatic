@@ -40,7 +40,6 @@ interface Props {
 
 export function ScanSheetButton({ onPieces }: Props) {
   const scan = useServerFn(scanBuildSheet);
-  const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
