@@ -83,9 +83,11 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  Linear Utilization
+                  Deck Length Used
                 </span>
-                <span className="text-sm font-mono font-bold">{Math.round(utilizationPct)}%</span>
+                <span className="text-sm font-mono font-bold">
+                  {fmt(totals.linearFt, 1)} / {fmt(trailer.deckLength / 12, 0)} ft · {Math.round(utilizationPct)}%
+                </span>
               </div>
               <div className="w-full h-2 bg-secondary overflow-hidden">
                 <div
