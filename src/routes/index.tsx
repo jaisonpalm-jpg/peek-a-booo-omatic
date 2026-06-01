@@ -5,7 +5,7 @@ import { PieceTable } from "@/components/freight/PieceTable";
 import { RecommendationPanel } from "@/components/freight/RecommendationPanel";
 import { ScanSheetButton } from "@/components/freight/ScanSheetButton";
 import { JobsSidebar } from "@/components/freight/JobsSidebar";
-import { LoadingDiagram } from "@/components/freight/LoadingDiagram";
+
 import { recommend } from "@/lib/freight/recommend";
 import { exportLoadSummaryPdf } from "@/lib/freight/exportPdf";
 import { useJobs, makeJob } from "@/lib/freight/jobsStore";
@@ -158,9 +158,6 @@ function EstimatorPage() {
                 <RecommendationPanel rec={rec} />
               </aside>
 
-              <section className="lg:col-span-12">
-                <LoadingDiagram pieces={pieces} rec={rec} />
-              </section>
             </div>
           )}
         </main>
