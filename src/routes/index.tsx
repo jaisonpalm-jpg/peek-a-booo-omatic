@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ScanLine } from "lucide-react";
+import { Download, ScanLine } from "lucide-react";
 import { PieceTable } from "@/components/freight/PieceTable";
 import { RecommendationPanel } from "@/components/freight/RecommendationPanel";
 import { recommend } from "@/lib/freight/recommend";
+import { exportLoadSummaryPdf } from "@/lib/freight/exportPdf";
 import type { Piece } from "@/lib/freight/types";
 
 export const Route = createFileRoute("/")({
@@ -100,9 +101,13 @@ function EstimatorPage() {
           </div>
           <button
             type="button"
-            className="text-xs font-bold py-2.5 px-4 bg-rule text-background uppercase tracking-widest hover:opacity-90 transition-opacity"
+            onClick={() => exportLoadSummaryPdf({ jobName, pieces, rec })}
+            disabled={pieces.filter((p) => p.qty > 0 && p.length > 0).length === 0}
+            className="inline-flex items-center gap-2 text-xs font-bold py-2.5 px-4 bg-rule text-background uppercase tracking-widest hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Save Job
+            <Download className="size-3.5" />
+            <span className="hidden sm:inline">Download PDF</span>
+            <span className="sm:hidden">PDF</span>
           </button>
         </div>
       </header>
