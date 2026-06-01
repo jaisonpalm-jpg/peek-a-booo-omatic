@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Download, ScanLine } from "lucide-react";
+import { Download } from "lucide-react";
 import { PieceTable } from "@/components/freight/PieceTable";
 import { RecommendationPanel } from "@/components/freight/RecommendationPanel";
+import { ScanSheetButton } from "@/components/freight/ScanSheetButton";
 import { recommend } from "@/lib/freight/recommend";
 import { exportLoadSummaryPdf } from "@/lib/freight/exportPdf";
 import type { Piece } from "@/lib/freight/types";
