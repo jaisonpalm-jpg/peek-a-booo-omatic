@@ -1,0 +1,69 @@
+// Freight estimator domain types
+
+export type Orientation = "as-entered" | "on-side" | "upright";
+
+export interface Piece {
+  id: string;
+  description: string;
+  /** Length, width, height in INCHES */
+  length: number;
+  width: number;
+  height: number;
+  qty: number;
+  orientation: Orientation;
+}
+
+export interface EffectiveDims {
+  /** Effective dimensions in INCHES after applying orientation */
+  length: number;
+  width: number;
+  height: number;
+}
+
+export type TrailerId =
+  | "box-26"
+  | "dryvan-53"
+  | "flatbed-48"
+  | "stepdeck-53"
+  | "doubledrop-48"
+  | "rgn-53";
+
+export interface TrailerSpec {
+  id: TrailerId;
+  name: string;
+  shortName: string;
+  /** Interior / deck length in INCHES */
+  deckLength: number;
+  /** Interior / deck width in INCHES */
+  deckWidth: number;
+  /** Interior height OR max load height for open decks, in INCHES */
+  maxHeight: number;
+  /** Max rear overhang allowed (federal default) in INCHES */
+  maxOverhang: number;
+  /** True for enclosed trailers (height = interior); false for flatbeds */
+  enclosed: boolean;
+  description: string;
+}
+
+export interface OversizeFlag {
+  pieceId: string;
+  reason: "width" | "height" | "length";
+  detail: string;
+}
+
+export interface Recommendation {
+  trailer: TrailerSpec | null;
+  alternates: Array<{ trailer: TrailerSpec; utilizationPct: number }>;
+  totals: {
+    pieces: number;
+    cubeFt3: number;
+    linearFt: number;
+    longestIn: number;
+    widestIn: number;
+    tallestIn: number;
+  };
+  oversize: OversizeFlag[];
+  utilizationPct: number;
+  withinLegalLimits: boolean;
+  notes: string[];
+}
