@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { ScanLine, Loader2, X } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { scanBuildSheet } from "@/lib/freight/scanSheet.functions";
