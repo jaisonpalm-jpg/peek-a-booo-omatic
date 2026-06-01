@@ -52,8 +52,8 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
           <Stat label="Total Volume" value={`${fmt(totals.cubeFt3, 0)}`} unit="ft³" />
           <Stat label="Pieces" value={`${fmt(totals.pieces)}`} unit="pcs" />
           <Stat
-            label="Linear Floor"
-            value={fmt(totals.linearFt, 1)}
+            label="Space Used"
+            value={trailer ? `${fmt(totals.linearFt, 1)} / ${fmt(trailer.deckLength / 12, 0)}` : fmt(totals.linearFt, 1)}
             unit="ft"
           />
           <Stat
