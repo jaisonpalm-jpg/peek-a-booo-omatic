@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { ScanLine, Loader2, X } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { scanBuildSheet } from "@/lib/freight/scanSheet.functions";
@@ -40,7 +40,6 @@ interface Props {
 
 export function ScanSheetButton({ onPieces }: Props) {
   const scan = useServerFn(scanBuildSheet);
-  const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -84,24 +83,23 @@ export function ScanSheetButton({ onPieces }: Props) {
 
   return (
     <div className="space-y-2">
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="sr-only"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) handleFile(f);
-          e.target.value = "";
-        }}
-      />
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => inputRef.current?.click()}
-        className="w-full p-5 bg-card ring-2 ring-border flex items-center gap-4 border-2 border-dashed border-border text-left hover:border-rule hover:bg-secondary transition-colors disabled:cursor-wait"
+      <label
+        className={`w-full p-5 bg-card ring-2 ring-border flex items-center gap-4 border-2 border-dashed border-border text-left hover:border-rule hover:bg-secondary transition-colors ${
+          busy ? "cursor-wait opacity-70" : "cursor-pointer"
+        }`}
       >
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          disabled={busy}
+          className="sr-only"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleFile(f);
+            e.target.value = "";
+          }}
+        />
         <div className="size-12 bg-secondary flex items-center justify-center shrink-0">
           {busy ? (
             <Loader2 className="size-5 text-foreground animate-spin" />
@@ -122,7 +120,7 @@ export function ScanSheetButton({ onPieces }: Props) {
         <span className="px-2.5 py-1 bg-rule text-background text-[10px] font-bold uppercase tracking-widest">
           {busy ? "…" : "Scan"}
         </span>
-      </button>
+      </label>
 
       {preview && !busy && (
         <div className="relative inline-block">
