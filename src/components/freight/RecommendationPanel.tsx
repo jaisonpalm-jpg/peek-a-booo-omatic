@@ -13,7 +13,7 @@ function fmt(n: number, digits = 0): string {
 }
 
 export function RecommendationPanel({ rec }: RecommendationPanelProps) {
-  const { trailer, totals, oversize, withinLegalLimits, utilizationPct, alternates, notes } = rec;
+  const { trailer, totals, oversize, withinLegalLimits, utilizationPct, deckAreaPct, alternates, notes } = rec;
 
   return (
     <div className="space-y-6">
