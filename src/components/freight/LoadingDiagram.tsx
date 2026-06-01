@@ -114,7 +114,7 @@ export function LoadingDiagram({ pieces, rec }: Props) {
       return;
     }
     if (layoutKeyRef.current !== layoutKey) {
-      setPlacements(autoPack(instances, trailer.deckWidth));
+      setPlacements(autoPack(instances, t.deckWidth));
       layoutKeyRef.current = layoutKey;
     }
   }, [layoutKey, instances, trailer]);
@@ -163,20 +163,20 @@ export function LoadingDiagram({ pieces, rec }: Props) {
     const farX = p.x + d.length;
     const farY = p.y + d.width;
     totalLengthUsed = Math.max(totalLengthUsed, farX);
-    const overhang = farX > trailer.deckLength;
-    const offDeck = farX > trailer.deckLength + trailer.maxOverhang;
-    const oversizeWidth = farY > trailer.deckWidth;
+    const overhang = farX > t.deckLength;
+    const offDeck = farX > t.deckLength + t.maxOverhang;
+    const oversizeWidth = farY > t.deckWidth;
     status[inst.id] = { overhang, oversizeWidth, offDeck };
     if (overhang) overhangCount++;
     if (oversizeWidth) widthViolationCount++;
   }
 
-  const capacityLen = trailer.deckLength + trailer.maxOverhang;
+  const capacityLen = t.deckLength + t.maxOverhang;
   const padTop = 28;
   const padSide = 20;
   const labelGutter = 28;
   const vbW = capacityLen + padSide * 2;
-  const vbH = trailer.deckWidth + padTop + labelGutter;
+  const vbH = t.deckWidth + padTop + labelGutter;
 
   const ticks: number[] = [];
   for (let ft = 0; ft <= capacityLen / 12; ft += 5) ticks.push(ft);
@@ -223,7 +223,7 @@ export function LoadingDiagram({ pieces, rec }: Props) {
     let ny = snap(y - drag.grabDy);
     // Constrain origin: allow overhang past deck end up to capacityLen; keep y within deck width.
     nx = Math.max(0, Math.min(nx, capacityLen - Math.min(d.length, capacityLen)));
-    ny = Math.max(0, Math.min(ny, trailer.deckWidth - Math.min(d.width, trailer.deckWidth)));
+    ny = Math.max(0, Math.min(ny, t.deckWidth - Math.min(d.width, t.deckWidth)));
     if (nx !== p.x || ny !== p.y) {
       drag.moved = true;
       setPlacements((prev) => ({ ...prev, [drag.id]: { ...prev[drag.id], x: nx, y: ny } }));
@@ -251,14 +251,14 @@ export function LoadingDiagram({ pieces, rec }: Props) {
       const nx = Math.max(0, Math.min(cur.x, capacityLen - Math.min(next.length, capacityLen)));
       const ny = Math.max(
         0,
-        Math.min(cur.y, trailer.deckWidth - Math.min(next.width, trailer.deckWidth)),
+        Math.min(cur.y, t.deckWidth - Math.min(next.width, t.deckWidth)),
       );
       return { ...prev, [id]: { x: nx, y: ny, rotated } };
     });
   }
 
   function reset() {
-    setPlacements(autoPack(instances, trailer.deckWidth));
+    setPlacements(autoPack(instances, t.deckWidth));
     setSelectedId(null);
   }
 
@@ -362,20 +362,20 @@ export function LoadingDiagram({ pieces, rec }: Props) {
           <rect
             x={padSide}
             y={padTop}
-            width={trailer.deckLength}
-            height={trailer.deckWidth}
+            width={t.deckLength}
+            height={t.deckWidth}
             fill="hsl(220 14% 96%)"
             stroke="currentColor"
             strokeWidth={2}
             className="text-foreground"
           />
           {/* Overhang zone */}
-          {trailer.maxOverhang > 0 && (
+          {t.maxOverhang > 0 && (
             <rect
-              x={padSide + trailer.deckLength}
+              x={padSide + t.deckLength}
               y={padTop}
-              width={trailer.maxOverhang}
-              height={trailer.deckWidth}
+              width={t.maxOverhang}
+              height={t.deckWidth}
               fill="none"
               stroke="currentColor"
               strokeDasharray="6 4"
@@ -384,12 +384,12 @@ export function LoadingDiagram({ pieces, rec }: Props) {
             />
           )}
           {/* Deck-end marker */}
-          {trailer.maxOverhang > 0 && (
+          {t.maxOverhang > 0 && (
             <line
-              x1={padSide + trailer.deckLength}
+              x1={padSide + t.deckLength}
               y1={padTop - 4}
-              x2={padSide + trailer.deckLength}
-              y2={padTop + trailer.deckWidth + 4}
+              x2={padSide + t.deckLength}
+              y2={padTop + t.deckWidth + 4}
               stroke="currentColor"
               strokeWidth={2}
               className="text-foreground"
@@ -463,16 +463,16 @@ export function LoadingDiagram({ pieces, rec }: Props) {
               <g key={ft}>
                 <line
                   x1={xt}
-                  y1={padTop + trailer.deckWidth}
+                  y1={padTop + t.deckWidth}
                   x2={xt}
-                  y2={padTop + trailer.deckWidth + 6}
+                  y2={padTop + t.deckWidth + 6}
                   stroke="currentColor"
                   strokeWidth={1}
                   className="text-muted-foreground"
                 />
                 <text
                   x={xt}
-                  y={padTop + trailer.deckWidth + 18}
+                  y={padTop + t.deckWidth + 18}
                   textAnchor="middle"
                   style={{ fontSize: 9, fontWeight: 600 }}
                   className="fill-muted-foreground"
@@ -491,7 +491,7 @@ export function LoadingDiagram({ pieces, rec }: Props) {
             <span className="size-3 border-2 border-foreground" />
             Deck
           </span>
-          {trailer.maxOverhang > 0 && (
+          {t.maxOverhang > 0 && (
             <span className="inline-flex items-center gap-1.5">
               <span className="size-3 border-2 border-dashed border-muted-foreground" />
               Legal Overhang
@@ -506,8 +506,8 @@ export function LoadingDiagram({ pieces, rec }: Props) {
             Past Limit
           </span>
           <span className="ml-auto font-mono normal-case tracking-normal text-foreground">
-            {(totalLengthUsed / 12).toFixed(1)}′ used of {(trailer.deckLength / 12).toFixed(0)}′ +{" "}
-            {(trailer.maxOverhang / 12).toFixed(0)}′ legal
+            {(totalLengthUsed / 12).toFixed(1)}′ used of {(t.deckLength / 12).toFixed(0)}′ +{" "}
+            {(t.maxOverhang / 12).toFixed(0)}′ legal
           </span>
         </div>
         {selectedInst && selectedPlacement && (
