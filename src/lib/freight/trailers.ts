@@ -4,6 +4,17 @@ import type { TrailerSpec } from "./types";
 // Sources: industry standard published dimensions.
 export const TRAILERS: TrailerSpec[] = [
   {
+    id: "box-16",
+    name: "16' Box Truck",
+    shortName: "Box 16'",
+    deckLength: 16 * 12, // 192"
+    deckWidth: 7.7 * 12, // ~92"
+    maxHeight: 7 * 12, // 84"
+    maxOverhang: 0,
+    enclosed: true,
+    description: "Compact enclosed box. Ideal for short local loads under 16'.",
+  },
+  {
     id: "box-26",
     name: "26' Box Truck",
     shortName: "Box 26'",
