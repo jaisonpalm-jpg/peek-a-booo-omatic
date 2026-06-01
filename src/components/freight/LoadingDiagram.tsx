@@ -135,6 +135,8 @@ export function LoadingDiagram({ pieces, rec }: Props) {
       </div>
     );
   }
+  // Alias so nested function declarations retain the non-null narrowing.
+  const t = trailer;
 
   // Color map by pieceId (stable across rotations/drags)
   const colorByPiece = new Map<string, string>();
