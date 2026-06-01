@@ -129,6 +129,7 @@ export function recommend(pieces: Piece[]): Recommendation {
   });
 
   const best = candidates[0] ?? null;
+  if (best) totals.linearFt = best.linearFt;
 
   const notes: string[] = [];
   if (validPieces.length === 0) {
