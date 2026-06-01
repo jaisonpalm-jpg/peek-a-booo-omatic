@@ -79,18 +79,36 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
         </div>
 
         {trailer && (
-          <div className="p-5 border-t-2 border-border">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Utilization
-              </span>
-              <span className="text-sm font-mono font-bold">{Math.round(utilizationPct)}%</span>
+          <div className="p-5 border-t-2 border-border space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Linear Utilization
+                </span>
+                <span className="text-sm font-mono font-bold">{Math.round(utilizationPct)}%</span>
+              </div>
+              <div className="w-full h-2 bg-secondary overflow-hidden">
+                <div
+                  className="h-full bg-success transition-all"
+                  style={{ width: `${Math.min(100, utilizationPct)}%` }}
+                />
+              </div>
             </div>
-            <div className="w-full h-2 bg-secondary overflow-hidden">
-              <div
-                className="h-full bg-success transition-all"
-                style={{ width: `${Math.min(100, utilizationPct)}%` }}
-              />
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Deck Area Occupied
+                </span>
+                <span className="text-sm font-mono font-bold">
+                  {fmt(totals.deckAreaFt2, 1)} / {fmt((trailer.deckLength * trailer.deckWidth) / 144, 0)} ft² · {Math.round(deckAreaPct)}%
+                </span>
+              </div>
+              <div className="w-full h-2 bg-secondary overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${Math.min(100, deckAreaPct)}%` }}
+                />
+              </div>
             </div>
           </div>
         )}
