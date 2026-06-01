@@ -75,20 +75,18 @@ function EstimatorPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <JobsSidebar
-        jobs={jobs}
-        activeId={activeId}
-        onSelect={selectJob}
-        onCreate={() => createJob("Untitled Job")}
-        onDelete={deleteJob}
-      />
-
-
       <div className="lg:pl-64">
         <header className="border-b-2 border-rule bg-card sticky top-0 z-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="size-9 bg-rule flex items-center justify-center shrink-0">
+              <JobsSidebar
+                jobs={jobs}
+                activeId={activeId}
+                onSelect={selectJob}
+                onCreate={() => createJob("Untitled Job")}
+                onDelete={deleteJob}
+              />
+              <div className="size-9 bg-rule items-center justify-center shrink-0 hidden sm:flex">
                 <div className="size-3.5 bg-background" />
               </div>
               <div className="min-w-0">
@@ -100,6 +98,7 @@ function EstimatorPage() {
                 </p>
               </div>
             </div>
+
             <button
               type="button"
               onClick={() => activeJob && exportLoadSummaryPdf({ jobName, pieces, rec })}
