@@ -89,6 +89,7 @@ export function recommend(pieces: Piece[]): Recommendation {
       const d = effectiveDims(p);
       acc.pieces += p.qty;
       acc.cubeFt3 += cubeFt3(d, p.qty);
+      acc.deckAreaFt2 += (d.length * d.width * p.qty) / 144;
       acc.longestIn = Math.max(acc.longestIn, d.length);
       acc.widestIn = Math.max(acc.widestIn, d.width);
       acc.tallestIn = Math.max(acc.tallestIn, d.height);
@@ -98,6 +99,7 @@ export function recommend(pieces: Piece[]): Recommendation {
       pieces: 0,
       cubeFt3: 0,
       linearFt: 0,
+      deckAreaFt2: 0,
       longestIn: 0,
       widestIn: 0,
       tallestIn: 0,
@@ -157,6 +159,14 @@ export function recommend(pieces: Piece[]): Recommendation {
     totals,
     oversize,
     utilizationPct: best?.utilizationPct ?? 0,
+    deckAreaPct: best
+      ? Math.min(
+          100,
+          (totals.deckAreaFt2 /
+            ((best.trailer.deckLength * best.trailer.deckWidth) / 144)) *
+            100,
+        )
+      : 0,
     withinLegalLimits: oversize.length === 0,
     notes,
   };

@@ -59,10 +59,13 @@ export interface Recommendation {
     pieces: number;
     cubeFt3: number;
     linearFt: number;
+    deckAreaFt2: number;
     longestIn: number;
     widestIn: number;
     tallestIn: number;
   };
+  /** Percentage of selected trailer's deck floor area occupied by piece footprints. */
+  deckAreaPct: number;
   oversize: OversizeFlag[];
   utilizationPct: number;
   withinLegalLimits: boolean;

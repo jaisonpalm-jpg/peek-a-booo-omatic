@@ -13,7 +13,7 @@ function fmt(n: number, digits = 0): string {
 }
 
 export function RecommendationPanel({ rec }: RecommendationPanelProps) {
-  const { trailer, totals, oversize, withinLegalLimits, utilizationPct, alternates, notes } = rec;
+  const { trailer, totals, oversize, withinLegalLimits, utilizationPct, deckAreaPct, alternates, notes } = rec;
 
   return (
     <div className="space-y-6">
@@ -57,6 +57,11 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
             unit="ft"
           />
           <Stat
+            label="Deck Area"
+            value={fmt(totals.deckAreaFt2, 1)}
+            unit="ft²"
+          />
+          <Stat
             label="Longest"
             value={fmt(totals.longestIn / 12, 1)}
             unit="ft"
@@ -74,18 +79,36 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
         </div>
 
         {trailer && (
-          <div className="p-5 border-t-2 border-border">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Utilization
-              </span>
-              <span className="text-sm font-mono font-bold">{Math.round(utilizationPct)}%</span>
+          <div className="p-5 border-t-2 border-border space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Linear Utilization
+                </span>
+                <span className="text-sm font-mono font-bold">{Math.round(utilizationPct)}%</span>
+              </div>
+              <div className="w-full h-2 bg-secondary overflow-hidden">
+                <div
+                  className="h-full bg-success transition-all"
+                  style={{ width: `${Math.min(100, utilizationPct)}%` }}
+                />
+              </div>
             </div>
-            <div className="w-full h-2 bg-secondary overflow-hidden">
-              <div
-                className="h-full bg-success transition-all"
-                style={{ width: `${Math.min(100, utilizationPct)}%` }}
-              />
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Deck Area Occupied
+                </span>
+                <span className="text-sm font-mono font-bold">
+                  {fmt(totals.deckAreaFt2, 1)} / {fmt((trailer.deckLength * trailer.deckWidth) / 144, 0)} ft² · {Math.round(deckAreaPct)}%
+                </span>
+              </div>
+              <div className="w-full h-2 bg-secondary overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${Math.min(100, deckAreaPct)}%` }}
+                />
+              </div>
             </div>
           </div>
         )}
