@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Download, ScanLine } from "lucide-react";
+import { Download } from "lucide-react";
 import { PieceTable } from "@/components/freight/PieceTable";
 import { RecommendationPanel } from "@/components/freight/RecommendationPanel";
+import { ScanSheetButton } from "@/components/freight/ScanSheetButton";
 import { recommend } from "@/lib/freight/recommend";
 import { exportLoadSummaryPdf } from "@/lib/freight/exportPdf";
 import type { Piece } from "@/lib/freight/types";
@@ -132,27 +133,11 @@ function EstimatorPage() {
               </p>
             </div>
 
-            <button
-              type="button"
-              disabled
-              className="w-full p-5 bg-card ring-2 ring-border flex items-center gap-4 border-2 border-dashed border-border text-left opacity-60 cursor-not-allowed"
-              title="Coming next: scan a build sheet photo"
-            >
-              <div className="size-12 bg-secondary flex items-center justify-center shrink-0">
-                <ScanLine className="size-5 text-muted-foreground" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-sm font-bold uppercase tracking-tight">
-                  Scan Build Sheet
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  Photo OCR auto-populates pieces — coming next
-                </p>
-              </div>
-              <span className="px-2.5 py-1 bg-warning-soft text-foreground text-[10px] font-bold uppercase tracking-widest">
-                Soon
-              </span>
-            </button>
+            <ScanSheetButton
+              onPieces={(scanned) =>
+                setPieces((prev) => [...prev, ...scanned])
+              }
+            />
 
             <PieceTable pieces={pieces} onChange={setPieces} />
           </section>
