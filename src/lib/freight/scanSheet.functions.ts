@@ -25,7 +25,7 @@ const PieceSchema = z.object({
 });
 
 const ResultSchema = z.object({
-  pieces: z.array(PieceSchema).max(200),
+  pieces: z.array(PieceSchema).max(5000),
   notes: z.string().max(500).optional().default(""),
 });
 
