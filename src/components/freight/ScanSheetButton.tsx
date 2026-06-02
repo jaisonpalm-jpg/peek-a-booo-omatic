@@ -159,8 +159,7 @@ export function ScanSheetButton({ onPieces }: Props) {
       >
         <input
           type="file"
-          accept="image/*"
-          capture="environment"
+          accept="image/*,application/pdf,.pdf"
           multiple
           disabled={busy}
           className="sr-only"
@@ -187,7 +186,7 @@ export function ScanSheetButton({ onPieces }: Props) {
           <p className="text-xs text-muted-foreground truncate">
             {busy
               ? "Extracting pieces with AI vision"
-              : "Snap or upload one or more pages — AI fills the piece list"}
+              : "Upload images or PDFs — AI fills the piece list"}
           </p>
         </div>
         <span className="px-2.5 py-1 bg-rule text-background text-[10px] font-bold uppercase tracking-widest">
