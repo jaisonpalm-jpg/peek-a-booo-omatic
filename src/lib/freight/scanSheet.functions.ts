@@ -11,7 +11,7 @@ const ImageDataUrl = z
 const InputSchema = z.object({
   // Backwards-compatible: accept either a single imageDataUrl or an array of images.
   imageDataUrl: ImageDataUrl.optional(),
-  images: z.array(ImageDataUrl).min(1).max(10).optional(),
+  images: z.array(ImageDataUrl).min(1).max(30).optional(),
 }).refine((v) => v.imageDataUrl || (v.images && v.images.length > 0), {
   message: "Provide at least one image",
 });
