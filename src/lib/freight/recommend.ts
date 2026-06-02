@@ -45,7 +45,7 @@ const BOX_L = 36;
 const BOX_W = 36;
 const BOX_H = 24;
 const BOX_VOL_IN3 = BOX_L * BOX_W * BOX_H;
-const BOX_PACK_EFFICIENCY = 0.6;
+const BOX_PACK_EFFICIENCY = 0.9;
 const BOX_FOOTPRINT_IN2 = BOX_L * BOX_W;
 // Boxes stack 2 high in a truck.
 const BOX_STACK = 2;
