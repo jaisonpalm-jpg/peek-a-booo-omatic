@@ -42,24 +42,42 @@ export function ScanSheetButton({ onPieces }: Props) {
   const scan = useServerFn(scanBuildSheet);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [previews, setPreviews] = useState<string[]>([]);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
 
-  async function handleFile(file: File) {
+  async function handleFiles(fileList: FileList) {
     setError(null);
-    if (!file.type.startsWith("image/")) {
-      setError("Please choose an image file (JPG or PNG).");
+    const files = Array.from(fileList);
+    if (files.length === 0) return;
+    if (files.length > 10) {
+      setError("Up to 10 pages at a time, please.");
       return;
     }
-    if (file.size > MAX_BYTES) {
-      setError("Image is over 8 MB — try a smaller photo.");
-      return;
+    for (const f of files) {
+      if (!f.type.startsWith("image/")) {
+        setError("Please choose image files (JPG or PNG).");
+        return;
+      }
+      if (f.size > MAX_BYTES) {
+        setError(`"${f.name}" is over 8 MB — try a smaller photo.`);
+        return;
+      }
     }
+
     setBusy(true);
+    setProgress({ done: 0, total: files.length });
     try {
-      const raw = await fileToDataUrl(file);
-      const small = await downscale(raw);
-      setPreview(small);
-      const result = await scan({ data: { imageDataUrl: small } });
+      const smalls: string[] = [];
+      for (const f of files) {
+        const raw = await fileToDataUrl(f);
+        const small = await downscale(raw);
+        smalls.push(small);
+      }
+      setPreviews(smalls);
+
+      const result = await scan({ data: { images: smalls } });
+      setProgress({ done: files.length, total: files.length });
+
       const pieces: Piece[] = result.pieces.map((p, idx) => ({
         id: `scan-${Date.now()}-${idx}`,
         description: p.description,
@@ -70,7 +88,7 @@ export function ScanSheetButton({ onPieces }: Props) {
         orientation: "as-entered",
       }));
       if (pieces.length === 0) {
-        setError("No pieces detected. Try a clearer, more zoomed-in photo.");
+        setError("No pieces detected. Try clearer, more zoomed-in photos.");
       } else {
         onPieces(pieces);
       }
@@ -78,6 +96,7 @@ export function ScanSheetButton({ onPieces }: Props) {
       setError(e instanceof Error ? e.message : "Scan failed.");
     } finally {
       setBusy(false);
+      setProgress(null);
     }
   }
 
@@ -92,11 +111,11 @@ export function ScanSheetButton({ onPieces }: Props) {
           type="file"
           accept="image/*"
           capture="environment"
+          multiple
           disabled={busy}
           className="sr-only"
           onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) handleFile(f);
+            if (e.target.files && e.target.files.length > 0) handleFiles(e.target.files);
             e.target.value = "";
           }}
         />
@@ -109,12 +128,16 @@ export function ScanSheetButton({ onPieces }: Props) {
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-bold uppercase tracking-tight">
-            {busy ? "Reading build sheet…" : "Scan Build Sheet"}
+            {busy
+              ? progress
+                ? `Reading ${progress.total} page${progress.total > 1 ? "s" : ""}…`
+                : "Reading build sheet…"
+              : "Scan Build Sheet"}
           </h3>
           <p className="text-xs text-muted-foreground truncate">
             {busy
               ? "Extracting pieces with AI vision"
-              : "Snap or upload a photo — AI fills the piece list"}
+              : "Snap or upload one or more pages — AI fills the piece list"}
           </p>
         </div>
         <span className="px-2.5 py-1 bg-rule text-background text-[10px] font-bold uppercase tracking-widest">
@@ -122,21 +145,25 @@ export function ScanSheetButton({ onPieces }: Props) {
         </span>
       </label>
 
-      {preview && !busy && (
-        <div className="relative inline-block">
-          <img
-            src={preview}
-            alt="Scanned build sheet"
-            className="max-h-32 ring-1 ring-border"
-          />
-          <button
-            type="button"
-            onClick={() => setPreview(null)}
-            className="absolute -top-2 -right-2 bg-rule text-background p-0.5"
-            aria-label="Dismiss preview"
-          >
-            <X className="size-3" />
-          </button>
+      {previews.length > 0 && !busy && (
+        <div className="flex flex-wrap gap-2">
+          {previews.map((src, i) => (
+            <div key={i} className="relative inline-block">
+              <img
+                src={src}
+                alt={`Scanned build sheet page ${i + 1}`}
+                className="max-h-32 ring-1 ring-border"
+              />
+              <button
+                type="button"
+                onClick={() => setPreviews((p) => p.filter((_, idx) => idx !== i))}
+                className="absolute -top-2 -right-2 bg-rule text-background p-0.5"
+                aria-label={`Dismiss preview ${i + 1}`}
+              >
+                <X className="size-3" />
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
