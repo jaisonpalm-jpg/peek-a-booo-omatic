@@ -174,6 +174,13 @@ export function recommend(pieces: Piece[]): Recommendation {
 
   return {
     trailer: best?.trailer ?? null,
+    candidates: candidates.map((c) => ({
+      trailer: c.trailer,
+      fits: c.fits,
+      utilizationPct: c.utilizationPct,
+      deckAreaPct: c.deckAreaPct,
+      linearFt: c.linearFt,
+    })),
     alternates: candidates
       .filter((c) => c.fits && c.trailer.id !== best?.trailer.id)
       .map((c) => ({ trailer: c.trailer, utilizationPct: c.utilizationPct })),
