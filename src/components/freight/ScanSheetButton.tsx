@@ -4,7 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { scanBuildSheet } from "@/lib/freight/scanSheet.functions";
 import type { Piece } from "@/lib/freight/types";
 
-const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
+const MAX_BYTES = 20 * 1024 * 1024; // 20 MB (PDFs can be larger than photos)
+const MAX_PAGES = 30;
 
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -12,6 +13,15 @@ function fileToDataUrl(file: File): Promise<string> {
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = () => reject(new Error("Could not read file"));
     reader.readAsDataURL(file);
+  });
+}
+
+function fileToArrayBuffer(file: File): Promise<ArrayBuffer> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as ArrayBuffer);
+    reader.onerror = () => reject(new Error("Could not read file"));
+    reader.readAsArrayBuffer(file);
   });
 }
 
@@ -32,6 +42,32 @@ async function downscale(dataUrl: string, maxEdge = 1600): Promise<string> {
   if (!ctx) return dataUrl;
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   return canvas.toDataURL("image/jpeg", 0.85);
+}
+
+// Render every page of a PDF to a JPEG data URL.
+async function pdfToImages(file: File, maxPages: number): Promise<string[]> {
+  const pdfjs = await import("pdfjs-dist");
+  // Use the bundled worker via Vite ?url import.
+  const workerSrc = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
+  pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+
+  const buf = await fileToArrayBuffer(file);
+  const pdf = await pdfjs.getDocument({ data: buf }).promise;
+  const pageCount = Math.min(pdf.numPages, maxPages);
+  const out: string[] = [];
+  for (let i = 1; i <= pageCount; i++) {
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale: 2 }); // ~144 DPI
+    const canvas = document.createElement("canvas");
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) continue;
+    await page.render({ canvas, canvasContext: ctx, viewport }).promise;
+    const raw = canvas.toDataURL("image/jpeg", 0.85);
+    out.push(await downscale(raw));
+  }
+  return out;
 }
 
 interface Props {
