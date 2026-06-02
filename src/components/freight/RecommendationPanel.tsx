@@ -117,6 +117,58 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
         )}
       </div>
 
+      {candidates.length > 0 && (
+        <div className="bg-card ring-2 ring-rule">
+          <div className="p-4 border-b-2 border-rule">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Floor-Area Utilization by Truck
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-px bg-border">
+            {candidates.map((c) => {
+              const isPick = trailer?.id === c.trailer.id;
+              return (
+                <div
+                  key={c.trailer.id}
+                  className={`p-4 bg-card ${isPick ? "ring-2 ring-success ring-inset" : ""}`}
+                >
+                  <div className="flex items-center justify-between gap-1 mb-2">
+                    <p className="text-[10px] font-bold uppercase tracking-tight">
+                      {c.trailer.shortName}
+                    </p>
+                    {isPick && (
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-success">
+                        Pick
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-2xl font-semibold tabular-nums">
+                    {Math.round(c.deckAreaPct)}
+                    <span className="text-xs text-muted-foreground font-normal">%</span>
+                  </p>
+                  <div className="w-full h-1.5 bg-secondary overflow-hidden mt-2">
+                    <div
+                      className={`h-full transition-all ${
+                        !c.fits ? "bg-warning" : c.deckAreaPct > 90 ? "bg-warning" : "bg-success"
+                      }`}
+                      style={{ width: `${Math.min(100, c.deckAreaPct)}%` }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-2 font-mono">
+                    {c.linearFt.toFixed(1)} / {Math.round(c.trailer.deckLength / 12)} ft
+                  </p>
+                  {!c.fits && (
+                    <p className="text-[10px] text-warning font-bold uppercase tracking-widest mt-1">
+                      Won't fit
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {notes.length > 0 && (
         <ul className="space-y-2">
           {notes.map((n, i) => (
