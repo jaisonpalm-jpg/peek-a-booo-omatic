@@ -49,8 +49,8 @@ export function ScanSheetButton({ onPieces }: Props) {
     setError(null);
     const files = Array.from(fileList);
     if (files.length === 0) return;
-    if (files.length > 10) {
-      setError("Up to 10 pages at a time, please.");
+    if (files.length > 30) {
+      setError("Up to 30 pages at a time, please.");
       return;
     }
     for (const f of files) {

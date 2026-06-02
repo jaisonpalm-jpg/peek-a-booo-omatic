@@ -81,10 +81,58 @@ function linearFtRequired(pieces: Piece[], deckWidthIn: number): number {
   return totalLinearIn / 12;
 }
 
+// 36"x36"x24" packing box for fittings + short pipe.
+const BOX_L = 36;
+const BOX_W = 36;
+const BOX_H = 24;
+const BOX_VOL_IN3 = BOX_L * BOX_W * BOX_H; // 31,104
+// Realistic packing efficiency for irregular fittings inside a box.
+const BOX_PACK_EFFICIENCY = 0.6;
+
+/** Returns true if a piece is a fitting (elbow/coupling/etc.) or short pipe (<30"). */
+function isBoxable(piece: Piece): boolean {
+  const d = effectiveDims(piece);
+  const desc = piece.description.toLowerCase();
+  const isPipe = /\bpipe\b|duct|tube|tubing|conduit/.test(desc);
+  if (!isPipe) return true;
+  return d.length < 30;
+}
+
+/** Replace boxable pieces with N virtual 36x36x24 box "pieces" for trailer math. */
+function packIntoBoxes(pieces: Piece[]): { effective: Piece[]; boxes: number } {
+  const loose: Piece[] = [];
+  let boxableVolIn3 = 0;
+  for (const p of pieces) {
+    if (isBoxable(p)) {
+      const d = effectiveDims(p);
+      boxableVolIn3 += d.length * d.width * d.height * p.qty;
+    } else {
+      loose.push(p);
+    }
+  }
+  const boxes = boxableVolIn3 > 0
+    ? Math.max(1, Math.ceil(boxableVolIn3 / (BOX_VOL_IN3 * BOX_PACK_EFFICIENCY)))
+    : 0;
+  const effective = [...loose];
+  if (boxes > 0) {
+    effective.push({
+      id: "__virtual-box__",
+      description: `Packing box (${BOX_L}x${BOX_W}x${BOX_H})`,
+      length: BOX_L,
+      width: BOX_W,
+      height: BOX_H,
+      qty: boxes,
+      orientation: "as-entered",
+    });
+  }
+  return { effective, boxes };
+}
+
 export function recommend(pieces: Piece[]): Recommendation {
   const validPieces = pieces.filter((p) => p.qty > 0 && p.length > 0);
+  const { effective: packedPieces, boxes } = packIntoBoxes(validPieces);
 
-  const totals = validPieces.reduce(
+  const totals = packedPieces.reduce(
     (acc, p) => {
       const d = effectiveDims(p);
       acc.pieces += p.qty;
@@ -103,14 +151,17 @@ export function recommend(pieces: Piece[]): Recommendation {
       longestIn: 0,
       widestIn: 0,
       tallestIn: 0,
+      boxes,
     },
   );
+  // Report piece count as the original SKU count (not virtualized box count).
+  totals.pieces = validPieces.reduce((n, p) => n + p.qty, 0);
 
   const oversize = validPieces.flatMap(flagsForPiece);
 
   // Score each trailer that fits; compute linear ft based on that trailer's deck width.
-  const candidates = TRAILERS.filter((t) => trailerFits(t, validPieces)).map((t) => {
-    const linearFt = linearFtRequired(validPieces, t.deckWidth);
+  const candidates = TRAILERS.filter((t) => trailerFits(t, packedPieces)).map((t) => {
+    const linearFt = linearFtRequired(packedPieces, t.deckWidth);
     const capacityFt = t.deckLength / 12;
     const utilizationPct = capacityFt > 0 ? Math.min(100, (linearFt / capacityFt) * 100) : 0;
     return { trailer: t, utilizationPct, linearFt };
@@ -148,6 +199,11 @@ export function recommend(pieces: Piece[]): Recommendation {
     if (totals.tallestIn > FEDERAL_LIMITS.maxHeightIn) {
       notes.push("Height exceeds 13'6\" — oversize permit required.");
     }
+  }
+  if (boxes > 0) {
+    notes.push(
+      `${boxes} packing box${boxes === 1 ? "" : "es"} (36"x36"x24") estimated for fittings + pipe under 30".`,
+    );
   }
 
   return {
