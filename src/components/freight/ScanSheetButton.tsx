@@ -4,7 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { scanBuildSheet } from "@/lib/freight/scanSheet.functions";
 import type { Piece } from "@/lib/freight/types";
 
-const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
+const MAX_BYTES = 20 * 1024 * 1024; // 20 MB (PDFs can be larger than photos)
+const MAX_PAGES = 30;
 
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -12,6 +13,15 @@ function fileToDataUrl(file: File): Promise<string> {
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = () => reject(new Error("Could not read file"));
     reader.readAsDataURL(file);
+  });
+}
+
+function fileToArrayBuffer(file: File): Promise<ArrayBuffer> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as ArrayBuffer);
+    reader.onerror = () => reject(new Error("Could not read file"));
+    reader.readAsArrayBuffer(file);
   });
 }
 
@@ -34,6 +44,32 @@ async function downscale(dataUrl: string, maxEdge = 1600): Promise<string> {
   return canvas.toDataURL("image/jpeg", 0.85);
 }
 
+// Render every page of a PDF to a JPEG data URL.
+async function pdfToImages(file: File, maxPages: number): Promise<string[]> {
+  const pdfjs = await import("pdfjs-dist");
+  // Use the bundled worker via Vite ?url import.
+  const workerSrc = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
+  pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+
+  const buf = await fileToArrayBuffer(file);
+  const pdf = await pdfjs.getDocument({ data: buf }).promise;
+  const pageCount = Math.min(pdf.numPages, maxPages);
+  const out: string[] = [];
+  for (let i = 1; i <= pageCount; i++) {
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale: 2 }); // ~144 DPI
+    const canvas = document.createElement("canvas");
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) continue;
+    await page.render({ canvas, canvasContext: ctx, viewport }).promise;
+    const raw = canvas.toDataURL("image/jpeg", 0.85);
+    out.push(await downscale(raw));
+  }
+  return out;
+}
+
 interface Props {
   onPieces: (pieces: Piece[]) => void;
 }
@@ -49,17 +85,16 @@ export function ScanSheetButton({ onPieces }: Props) {
     setError(null);
     const files = Array.from(fileList);
     if (files.length === 0) return;
-    if (files.length > 30) {
-      setError("Up to 30 pages at a time, please.");
-      return;
-    }
+
     for (const f of files) {
-      if (!f.type.startsWith("image/")) {
-        setError("Please choose image files (JPG or PNG).");
+      const isImage = f.type.startsWith("image/");
+      const isPdf = f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf");
+      if (!isImage && !isPdf) {
+        setError(`"${f.name}" is not an image or PDF.`);
         return;
       }
       if (f.size > MAX_BYTES) {
-        setError(`"${f.name}" is over 8 MB — try a smaller photo.`);
+        setError(`"${f.name}" is over 20 MB — try a smaller file.`);
         return;
       }
     }
@@ -69,14 +104,29 @@ export function ScanSheetButton({ onPieces }: Props) {
     try {
       const smalls: string[] = [];
       for (const f of files) {
-        const raw = await fileToDataUrl(f);
-        const small = await downscale(raw);
-        smalls.push(small);
+        const isPdf = f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf");
+        if (isPdf) {
+          const remaining = MAX_PAGES - smalls.length;
+          if (remaining <= 0) break;
+          const pages = await pdfToImages(f, remaining);
+          smalls.push(...pages);
+        } else {
+          if (smalls.length >= MAX_PAGES) break;
+          const raw = await fileToDataUrl(f);
+          smalls.push(await downscale(raw));
+        }
+        setProgress({ done: smalls.length, total: Math.max(smalls.length, files.length) });
       }
+
+      if (smalls.length === 0) {
+        setError("Could not read any pages from the selected files.");
+        return;
+      }
+      if (smalls.length > MAX_PAGES) smalls.length = MAX_PAGES;
       setPreviews(smalls);
 
       const result = await scan({ data: { images: smalls } });
-      setProgress({ done: files.length, total: files.length });
+      setProgress({ done: smalls.length, total: smalls.length });
 
       const pieces: Piece[] = result.pieces.map((p, idx) => ({
         id: `scan-${Date.now()}-${idx}`,
@@ -88,7 +138,7 @@ export function ScanSheetButton({ onPieces }: Props) {
         orientation: "as-entered",
       }));
       if (pieces.length === 0) {
-        setError("No pieces detected. Try clearer, more zoomed-in photos.");
+        setError("No pieces detected. Try clearer, more zoomed-in pages.");
       } else {
         onPieces(pieces);
       }
@@ -109,8 +159,7 @@ export function ScanSheetButton({ onPieces }: Props) {
       >
         <input
           type="file"
-          accept="image/*"
-          capture="environment"
+          accept="image/*,application/pdf,.pdf"
           multiple
           disabled={busy}
           className="sr-only"
@@ -137,7 +186,7 @@ export function ScanSheetButton({ onPieces }: Props) {
           <p className="text-xs text-muted-foreground truncate">
             {busy
               ? "Extracting pieces with AI vision"
-              : "Snap or upload one or more pages — AI fills the piece list"}
+              : "Upload images or PDFs — AI fills the piece list"}
           </p>
         </div>
         <span className="px-2.5 py-1 bg-rule text-background text-[10px] font-bold uppercase tracking-widest">
