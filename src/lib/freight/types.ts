@@ -52,9 +52,19 @@ export interface OversizeFlag {
   detail: string;
 }
 
+export interface CandidateBreakdown {
+  trailer: TrailerSpec;
+  fits: boolean;
+  utilizationPct: number;
+  deckAreaPct: number;
+  linearFt: number;
+}
+
 export interface Recommendation {
   trailer: TrailerSpec | null;
   alternates: Array<{ trailer: TrailerSpec; utilizationPct: number }>;
+  /** Per-candidate breakdown for the 3 truck sizes, smallest first. */
+  candidates: CandidateBreakdown[];
   totals: {
     pieces: number;
     cubeFt3: number;
