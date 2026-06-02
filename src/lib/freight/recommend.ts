@@ -200,6 +200,11 @@ export function recommend(pieces: Piece[]): Recommendation {
       notes.push("Height exceeds 13'6\" — oversize permit required.");
     }
   }
+  if (boxes > 0) {
+    notes.push(
+      `${boxes} packing box${boxes === 1 ? "" : "es"} (36"x36"x24") estimated for fittings + pipe under 30".`,
+    );
+  }
 
   return {
     trailer: best?.trailer ?? null,
