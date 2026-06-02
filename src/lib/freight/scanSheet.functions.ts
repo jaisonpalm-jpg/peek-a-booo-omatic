@@ -1,13 +1,19 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-// Input: a data URL (image/jpeg or image/png) of the build sheet photo.
+// Input: one or more data URLs (image/jpeg or image/png) of build sheet pages.
+const ImageDataUrl = z
+  .string()
+  .min(32)
+  .max(15_000_000)
+  .refine((s) => s.startsWith("data:image/"), "Must be an image data URL");
+
 const InputSchema = z.object({
-  imageDataUrl: z
-    .string()
-    .min(32)
-    .max(15_000_000)
-    .refine((s) => s.startsWith("data:image/"), "Must be an image data URL"),
+  // Backwards-compatible: accept either a single imageDataUrl or an array of images.
+  imageDataUrl: ImageDataUrl.optional(),
+  images: z.array(ImageDataUrl).min(1).max(10).optional(),
+}).refine((v) => v.imageDataUrl || (v.images && v.images.length > 0), {
+  message: "Provide at least one image",
 });
 
 const PieceSchema = z.object({
