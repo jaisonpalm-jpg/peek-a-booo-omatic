@@ -85,17 +85,16 @@ export function ScanSheetButton({ onPieces }: Props) {
     setError(null);
     const files = Array.from(fileList);
     if (files.length === 0) return;
-    if (files.length > 30) {
-      setError("Up to 30 pages at a time, please.");
-      return;
-    }
+
     for (const f of files) {
-      if (!f.type.startsWith("image/")) {
-        setError("Please choose image files (JPG or PNG).");
+      const isImage = f.type.startsWith("image/");
+      const isPdf = f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf");
+      if (!isImage && !isPdf) {
+        setError(`"${f.name}" is not an image or PDF.`);
         return;
       }
       if (f.size > MAX_BYTES) {
-        setError(`"${f.name}" is over 8 MB — try a smaller photo.`);
+        setError(`"${f.name}" is over 20 MB — try a smaller file.`);
         return;
       }
     }
@@ -105,14 +104,29 @@ export function ScanSheetButton({ onPieces }: Props) {
     try {
       const smalls: string[] = [];
       for (const f of files) {
-        const raw = await fileToDataUrl(f);
-        const small = await downscale(raw);
-        smalls.push(small);
+        const isPdf = f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf");
+        if (isPdf) {
+          const remaining = MAX_PAGES - smalls.length;
+          if (remaining <= 0) break;
+          const pages = await pdfToImages(f, remaining);
+          smalls.push(...pages);
+        } else {
+          if (smalls.length >= MAX_PAGES) break;
+          const raw = await fileToDataUrl(f);
+          smalls.push(await downscale(raw));
+        }
+        setProgress({ done: smalls.length, total: Math.max(smalls.length, files.length) });
       }
+
+      if (smalls.length === 0) {
+        setError("Could not read any pages from the selected files.");
+        return;
+      }
+      if (smalls.length > MAX_PAGES) smalls.length = MAX_PAGES;
       setPreviews(smalls);
 
       const result = await scan({ data: { images: smalls } });
-      setProgress({ done: files.length, total: files.length });
+      setProgress({ done: smalls.length, total: smalls.length });
 
       const pieces: Piece[] = result.pieces.map((p, idx) => ({
         id: `scan-${Date.now()}-${idx}`,
@@ -124,7 +138,7 @@ export function ScanSheetButton({ onPieces }: Props) {
         orientation: "as-entered",
       }));
       if (pieces.length === 0) {
-        setError("No pieces detected. Try clearer, more zoomed-in photos.");
+        setError("No pieces detected. Try clearer, more zoomed-in pages.");
       } else {
         onPieces(pieces);
       }
