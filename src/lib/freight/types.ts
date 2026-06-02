@@ -63,6 +63,8 @@ export interface Recommendation {
     longestIn: number;
     widestIn: number;
     tallestIn: number;
+    /** Estimated 36"x36"x24" boxes needed to hold fittings + short pipe. */
+    boxes: number;
   };
   /** Percentage of selected trailer's deck floor area occupied by piece footprints. */
   deckAreaPct: number;
