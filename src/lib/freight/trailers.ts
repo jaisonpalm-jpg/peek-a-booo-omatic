@@ -48,6 +48,28 @@ export const TRAILERS: TrailerSpec[] = [
     description: "Open deck. Allows up to 4' rear overhang without permit.",
   },
   {
+    id: "hotshot-40",
+    name: "40' Hotshot",
+    shortName: "Hotshot",
+    deckLength: 40 * 12, // 480" — typical gooseneck deck
+    deckWidth: 8.5 * 12, // 102"
+    maxHeight: 8.5 * 12, // 102" open load height
+    maxOverhang: 4 * 12,
+    enclosed: false,
+    description: "Class-3/5 pickup with gooseneck. Fast LTL flatbed for sub-40' loads under ~16.5k lbs.",
+  },
+  {
+    id: "conestoga-48",
+    name: "48' Conestoga",
+    shortName: "Conestoga",
+    deckLength: 48 * 12, // 576"
+    deckWidth: 8.5 * 12, // 102"
+    maxHeight: 8.17 * 12, // ~98" interior clearance under rolling tarp
+    maxOverhang: 4 * 12,
+    enclosed: false,
+    description: "Flatbed with rolling tarp system. Weather protection without crane-load restrictions.",
+  },
+  {
     id: "stepdeck-53",
     name: "53' Step Deck",
     shortName: "Step Deck",

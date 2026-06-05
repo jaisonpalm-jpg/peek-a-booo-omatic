@@ -113,7 +113,7 @@ function longestPieceIn(pieces: Piece[]): number {
 }
 
 /** Only consider the three trucks the user actually books. */
-const CANDIDATE_TRAILER_IDS = ["box-16", "box-26", "dryvan-53"] as const;
+const CANDIDATE_TRAILER_IDS = ["hotshot-40", "flatbed-48", "conestoga-48"] as const;
 
 export function recommend(pieces: Piece[]): Recommendation {
   const validPieces = pieces.filter((p) => p.qty > 0 && p.length > 0);
@@ -138,7 +138,7 @@ export function recommend(pieces: Piece[]): Recommendation {
       const needed = floorAreaIn2(validPieces, boxes);
       // Required deck length = how far back the load reaches if spread across the deck width.
       const linearIn = needed / t.deckWidth;
-      const fitsLength = Math.max(longestLoose, linearIn) <= t.deckLength;
+      const fitsLength = longestLoose <= t.deckLength + t.maxOverhang && linearIn <= t.deckLength;
       const fitsWidth = widestIn <= t.deckWidth;
       const fitsHeight = tallestIn <= t.maxHeight;
       const fits = fitsLength && fitsWidth && fitsHeight;
