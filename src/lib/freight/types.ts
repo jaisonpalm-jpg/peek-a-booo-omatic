@@ -25,6 +25,8 @@ export type TrailerId =
   | "box-26"
   | "dryvan-53"
   | "flatbed-48"
+  | "hotshot-40"
+  | "conestoga-48"
   | "stepdeck-53"
   | "doubledrop-48"
   | "rgn-53";
