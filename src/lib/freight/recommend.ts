@@ -113,7 +113,7 @@ function longestPieceIn(pieces: Piece[]): number {
 }
 
 /** Only consider the three trucks the user actually books. */
-const CANDIDATE_TRAILER_IDS = ["box-16", "box-26", "dryvan-53"] as const;
+const CANDIDATE_TRAILER_IDS = ["hotshot-40", "flatbed-48", "conestoga-48"] as const;
 
 export function recommend(pieces: Piece[]): Recommendation {
   const validPieces = pieces.filter((p) => p.qty > 0 && p.length > 0);
