@@ -143,7 +143,11 @@ interface CurbStack {
  * fits within the current top piece and (b) combined height + dunnage stays
  * under the trailer's max load height. Otherwise start a new stack.
  */
-function stackCurbs(curbs: CurbInstance[], maxHeightIn: number): CurbStack[] {
+function stackCurbs(
+  curbs: CurbInstance[],
+  maxHeightIn: number,
+  maxStackCount = Number.POSITIVE_INFINITY,
+): CurbStack[] {
   const sorted = [...curbs].sort((a, b) => b.footprint - a.footprint);
   const stacks: CurbStack[] = [];
   for (const c of sorted) {
@@ -151,7 +155,8 @@ function stackCurbs(curbs: CurbInstance[], maxHeightIn: number): CurbStack[] {
     for (const s of stacks) {
       const fitsFootprint = c.length <= s.topLength && c.width <= s.topWidth;
       const fitsHeight = s.heightUsed + STACK_GAP_IN + c.height <= maxHeightIn;
-      if (fitsFootprint && fitsHeight) {
+      const fitsCount = s.count < maxStackCount;
+      if (fitsFootprint && fitsHeight && fitsCount) {
         s.heightUsed += STACK_GAP_IN + c.height;
         s.topLength = c.length;
         s.topWidth = c.width;
@@ -199,7 +204,12 @@ function toCurbStackViews(stacks: CurbStack[]): CurbStackView[] {
  * Floor area in square inches needed on the trailer deck,
  * accounting for stacking pipes, curbs, and boxes.
  */
-function floorAreaIn2(pieces: Piece[], boxes: number, maxHeightIn: number): number {
+function floorAreaIn2(
+  pieces: Piece[],
+  boxes: number,
+  maxHeightIn: number,
+  maxStackCount = Number.POSITIVE_INFINITY,
+): number {
   let area = 0;
   for (const p of pieces) {
     if (isBoxable(p) || isRoofCurb(p)) continue;
@@ -213,7 +223,7 @@ function floorAreaIn2(pieces: Piece[], boxes: number, maxHeightIn: number): numb
       area += withSeparation(d.length, d.width) * p.qty;
     }
   }
-  const stacks = stackCurbs(expandCurbs(pieces), maxHeightIn);
+  const stacks = stackCurbs(expandCurbs(pieces), maxHeightIn, maxStackCount);
   for (const s of stacks) {
     // Use separation buffer based on a square root of footprint as proxy dims.
     const side = Math.sqrt(s.footprint);
@@ -245,7 +255,13 @@ const CANDIDATE_TRAILER_IDS = [
   "conestoga-48",
 ] as const;
 
-export function recommend(pieces: Piece[]): Recommendation {
+export interface RecommendOptions {
+  /** User-selected maximum number of curbs in a single stack (legal height still wins). */
+  maxCurbStack?: number;
+}
+
+export function recommend(pieces: Piece[], options: RecommendOptions = {}): Recommendation {
+  const maxCurbStack = Math.max(1, options.maxCurbStack ?? Number.POSITIVE_INFINITY);
   const validPieces = pieces.filter((p) => p.qty > 0 && p.length > 0);
   const boxes = packBoxes(validPieces);
 
@@ -265,8 +281,8 @@ export function recommend(pieces: Piece[]): Recommendation {
   const candidates = candidatePool
     .map((t) => {
       const deckArea = t.deckLength * t.deckWidth;
-      const needed = floorAreaIn2(validPieces, boxes, t.maxHeight);
-      const curbStacks = stackCurbs(expandCurbs(validPieces), t.maxHeight);
+      const needed = floorAreaIn2(validPieces, boxes, t.maxHeight, maxCurbStack);
+      const curbStacks = stackCurbs(expandCurbs(validPieces), t.maxHeight, maxCurbStack);
       // Required deck length = how far back the load reaches if spread across the deck width.
       const linearIn = needed / t.deckWidth;
       const fitsLength = longestLoose <= t.deckLength + t.maxOverhang && linearIn <= t.deckLength;
