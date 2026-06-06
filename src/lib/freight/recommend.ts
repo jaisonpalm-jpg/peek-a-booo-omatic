@@ -255,6 +255,12 @@ const CANDIDATE_TRAILER_IDS = [
   "conestoga-48",
 ] as const;
 
+const OPEN_DECK_IDS = [
+  "hotshot-40",
+  "flatbed-48",
+  "conestoga-48",
+] as const;
+
 export interface RecommendOptions {
   /** User-selected maximum number of curbs in a single stack (legal height still wins). */
   maxCurbStack?: number;
@@ -274,9 +280,12 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
   const longestLoose = longestPieceIn(validPieces);
   const oversize = validPieces.flatMap(flagsForPiece);
 
-  const candidatePool = TRAILERS.filter((t) =>
-    (CANDIDATE_TRAILER_IDS as readonly string[]).includes(t.id),
-  );
+  const hasCurbs = validPieces.some((p) => isRoofCurb(p));
+  const candidateIds = hasCurbs
+    ? (OPEN_DECK_IDS as readonly string[])
+    : (CANDIDATE_TRAILER_IDS as readonly string[]);
+
+  const candidatePool = TRAILERS.filter((t) => candidateIds.includes(t.id));
 
   const candidates = candidatePool
     .map((t) => {
