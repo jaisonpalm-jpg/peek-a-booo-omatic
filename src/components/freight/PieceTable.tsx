@@ -85,6 +85,12 @@ export function PieceTable({ pieces, onChange }: PieceTableProps) {
               <th className="px-2 py-3 font-bold text-muted-foreground uppercase tracking-tight text-xs">
                 Qty
               </th>
+              <th className="px-2 py-3 font-bold text-muted-foreground uppercase tracking-tight text-xs">
+                Wt (lb)
+              </th>
+              <th className="px-2 py-3 font-bold text-muted-foreground uppercase tracking-tight text-xs text-center">
+                Ins
+              </th>
               <th className="px-2 py-3 font-bold text-muted-foreground uppercase tracking-tight text-xs text-center">
                 Orient
               </th>
