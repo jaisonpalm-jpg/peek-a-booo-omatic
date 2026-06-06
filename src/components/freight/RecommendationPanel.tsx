@@ -16,7 +16,8 @@ function fmt(n: number, digits = 0): string {
 
 export function RecommendationPanel({ rec }: RecommendationPanelProps) {
   const { trailer, totals, oversize, withinLegalLimits, utilizationPct, deckAreaPct, alternates, candidates, notes, confidence, reason } = rec;
-  const [tab, setTab] = useState<"enclosed" | "open">("enclosed");
+  const hasEnclosed = candidates.some((c) => ["box-16", "box-26", "dryvan-53"].includes(c.trailer.id));
+  const [tab, setTab] = useState<"enclosed" | "open">(hasEnclosed ? "enclosed" : "open");
 
   return (
     <div className="space-y-6">
@@ -146,7 +147,7 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
       </div>
 
       <div className="bg-card ring-2 ring-rule">
-        <div className="flex border-b-2 border-rule">
+        <div className={`flex border-b-2 border-rule ${!hasEnclosed ? "hidden" : ""}`}>
           <button
             type="button"
             onClick={() => setTab("enclosed")}
