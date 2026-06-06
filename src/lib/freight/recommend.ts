@@ -279,7 +279,13 @@ export function recommend(pieces: Piece[]): Recommendation {
     })
     .sort((a, b) => a.trailer.deckLength - b.trailer.deckLength);
 
-  const best = candidates.find((c) => c.fits) ?? null;
+  const insulated = validPieces.some((p) => p.insulated);
+  const totalWeightLb = validPieces.reduce((s, p) => s + (p.weight ?? 0) * p.qty, 0);
+
+  // Prefer Conestoga when the load has any insulated/weather-sensitive pieces
+  // and a Conestoga actually fits. Otherwise pick the smallest fitting trailer.
+  const conestogaFit = candidates.find((c) => c.fits && c.trailer.id === "conestoga-48");
+  const best = (insulated && conestogaFit) || candidates.find((c) => c.fits) || null;
 
   const totals = {
     pieces: totalPieces,
@@ -290,6 +296,8 @@ export function recommend(pieces: Piece[]): Recommendation {
     widestIn,
     tallestIn,
     boxes,
+    weightLb: totalWeightLb,
+    insulated,
   };
 
   const notes: string[] = [];
@@ -309,8 +317,58 @@ export function recommend(pieces: Piece[]): Recommendation {
       `${totalCurbs} roof curb${totalCurbs === 1 ? "" : "s"} arranged in ${curbStacks.length} deck position${curbStacks.length === 1 ? "" : "s"}${stacked > 0 ? ` (${stacked} stacked with 2\" dunnage gaps)` : ""}.`,
     );
   }
+  if (insulated) {
+    notes.push("Insulated pieces flagged — Conestoga preferred for weather protection.");
+  }
+  if (totalWeightLb > 0) {
+    notes.push(`Total load weight: ${Math.round(totalWeightLb).toLocaleString()} lb.`);
+  }
   notes.push(`Pieces separated by ${SEPARATION_IN}" strap/breathing room on the deck.`);
   notes.push("Pipes ≤6\" stack 3 high, ≤12\" stack 2 high, larger lay flat.");
+
+  // Confidence: starts at 100, knocked down by problem signals.
+  let confidence = 100;
+  const reasonBits: string[] = [];
+  if (validPieces.length === 0) {
+    confidence = 0;
+  } else if (!best) {
+    confidence = 25;
+    reasonBits.push("no standard trailer accommodates the load as entered");
+  } else {
+    if (oversize.length > 0) {
+      confidence -= Math.min(30, oversize.length * 10);
+      reasonBits.push(`${oversize.length} oversize flag${oversize.length === 1 ? "" : "s"} require permits`);
+    }
+    if (best.utilizationPct > 95) {
+      confidence -= 10;
+      reasonBits.push(`deck length ${Math.round(best.utilizationPct)}% utilized — tight fit`);
+    }
+    if (best.deckAreaPct > 95) {
+      confidence -= 10;
+      reasonBits.push(`floor area ${Math.round(best.deckAreaPct)}% occupied`);
+    }
+    if (insulated && best.trailer.id !== "conestoga-48") {
+      confidence -= 15;
+      reasonBits.push("insulated load but Conestoga did not fit — verify tarping plan");
+    }
+  }
+  confidence = Math.max(0, Math.min(100, confidence));
+
+  let reason: string;
+  if (validPieces.length === 0) {
+    reason = "Add pieces to generate a recommendation.";
+  } else if (!best) {
+    reason = "Load exceeds all standard equipment — split the shipment or arrange specialized transport.";
+  } else {
+    const base =
+      `${best.trailer.name} picked: ${totalPieces} piece${totalPieces === 1 ? "" : "s"} ` +
+      `fit within ${Math.round(best.linearFt)} ft of deck (${Math.round(best.utilizationPct)}% used, ${Math.round(best.deckAreaPct)}% floor area)`;
+    const insulatedReason = insulated && best.trailer.id === "conestoga-48"
+      ? "; Conestoga selected because the load includes insulated pieces"
+      : "";
+    const tail = reasonBits.length > 0 ? `. Caveats: ${reasonBits.join("; ")}.` : ".";
+    reason = base + insulatedReason + tail;
+  }
 
   return {
     trailer: best?.trailer ?? null,
@@ -331,5 +389,8 @@ export function recommend(pieces: Piece[]): Recommendation {
     deckAreaPct: best?.deckAreaPct ?? 0,
     withinLegalLimits: oversize.length === 0,
     notes,
+    confidence,
+    reason,
   };
 }
+
