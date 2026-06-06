@@ -255,7 +255,13 @@ const CANDIDATE_TRAILER_IDS = [
   "conestoga-48",
 ] as const;
 
-export function recommend(pieces: Piece[]): Recommendation {
+export interface RecommendOptions {
+  /** User-selected maximum number of curbs in a single stack (legal height still wins). */
+  maxCurbStack?: number;
+}
+
+export function recommend(pieces: Piece[], options: RecommendOptions = {}): Recommendation {
+  const maxCurbStack = Math.max(1, options.maxCurbStack ?? Number.POSITIVE_INFINITY);
   const validPieces = pieces.filter((p) => p.qty > 0 && p.length > 0);
   const boxes = packBoxes(validPieces);
 
@@ -275,8 +281,8 @@ export function recommend(pieces: Piece[]): Recommendation {
   const candidates = candidatePool
     .map((t) => {
       const deckArea = t.deckLength * t.deckWidth;
-      const needed = floorAreaIn2(validPieces, boxes, t.maxHeight);
-      const curbStacks = stackCurbs(expandCurbs(validPieces), t.maxHeight);
+      const needed = floorAreaIn2(validPieces, boxes, t.maxHeight, maxCurbStack);
+      const curbStacks = stackCurbs(expandCurbs(validPieces), t.maxHeight, maxCurbStack);
       // Required deck length = how far back the load reaches if spread across the deck width.
       const linearIn = needed / t.deckWidth;
       const fitsLength = longestLoose <= t.deckLength + t.maxOverhang && linearIn <= t.deckLength;
