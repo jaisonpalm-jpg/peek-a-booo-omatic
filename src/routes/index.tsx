@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Download } from "lucide-react";
 import { PieceTable } from "@/components/freight/PieceTable";
 import { RecommendationPanel } from "@/components/freight/RecommendationPanel";
