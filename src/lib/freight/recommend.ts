@@ -224,8 +224,17 @@ function longestPieceIn(pieces: Piece[]): number {
   return m;
 }
 
-/** Only consider the three trucks the user actually books. */
-const CANDIDATE_TRAILER_IDS = ["hotshot-40", "flatbed-48", "conestoga-48"] as const;
+/** Trailers the user actually books. Enclosed options come first as the default
+ *  picks; flatbed/hotshot/conestoga are kept as secondary options for loads that
+ *  actually need an open deck (oversize, tall, or long with overhang). */
+const CANDIDATE_TRAILER_IDS = [
+  "box-16",
+  "box-26",
+  "dryvan-53",
+  "hotshot-40",
+  "flatbed-48",
+  "conestoga-48",
+] as const;
 
 export function recommend(pieces: Piece[]): Recommendation {
   const validPieces = pieces.filter((p) => p.qty > 0 && p.length > 0);
