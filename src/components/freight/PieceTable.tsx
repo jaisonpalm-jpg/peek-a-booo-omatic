@@ -100,7 +100,7 @@ export function PieceTable({ pieces, onChange }: PieceTableProps) {
           <tbody className="divide-y divide-border">
             {pieces.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground text-sm">
+                <td colSpan={9} className="px-4 py-10 text-center text-muted-foreground text-sm">
                   No pieces yet. Add a row to start estimating.
                 </td>
               </tr>
