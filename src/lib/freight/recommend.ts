@@ -233,7 +233,7 @@ function toCurbStackViews(stacks: CurbStack[]): CurbStackView[] {
  */
 function floorAreaIn2(
   pieces: Piece[],
-  boxes: number,
+  boxes: BoxBreakdown,
   maxHeightIn: number,
   maxStackCount = Number.POSITIVE_INFINITY,
 ): number {
@@ -241,7 +241,6 @@ function floorAreaIn2(
   for (const p of pieces) {
     if (isBoxable(p) || isRoofCurb(p)) continue;
     const d = effectiveDims(p);
-    const footprint = d.length * d.width;
     if (isPipe(p)) {
       const diameter = Math.max(d.width, d.height);
       const stack = pipeStackCount(diameter);
@@ -252,11 +251,12 @@ function floorAreaIn2(
   }
   const stacks = stackCurbs(expandCurbs(pieces), maxHeightIn, maxStackCount);
   for (const s of stacks) {
-    // Use separation buffer based on a square root of footprint as proxy dims.
     const side = Math.sqrt(s.footprint);
     area += withSeparation(side, side);
   }
-  area += (boxes * BOX_FOOTPRINT_IN2) / BOX_STACK;
+  // Filler boxes ride loose, stacked 2 high. Gasket boxes ride on 48x40 pallets.
+  area += (boxes.fillerBoxes * BOX_FOOTPRINT_IN2) / BOX_STACK;
+  area += boxes.gasketPallets * PALLET_FOOTPRINT_IN2;
   return area;
 }
 
