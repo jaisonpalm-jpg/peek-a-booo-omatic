@@ -52,6 +52,8 @@ export function PieceTable({ pieces, onChange }: PieceTableProps) {
         height: 0,
         qty: 1,
         orientation: "as-entered",
+        weight: 0,
+        insulated: false,
       },
     ]);
   }
