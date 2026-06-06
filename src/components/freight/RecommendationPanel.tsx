@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { AlertTriangle, CheckCircle2, Truck } from "lucide-react";
 import type { Recommendation } from "@/lib/freight/types";
 import { CurbStackDiagram } from "./CurbStackDiagram";
