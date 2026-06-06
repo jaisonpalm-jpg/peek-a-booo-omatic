@@ -54,8 +54,13 @@ function isPipe(p: Piece): boolean {
   return /\bpipe\b|duct|tube|tubing|conduit/.test(p.description.toLowerCase());
 }
 
+function isRoofCurb(p: Piece): boolean {
+  return /\bcurb\b|adaptor|adapter/.test(p.description.toLowerCase());
+}
+
 function isBoxable(piece: Piece): boolean {
   const d = effectiveDims(piece);
+  if (isRoofCurb(piece)) return false;
   if (!isPipe(piece)) return true;
   return d.length < 30;
 }
@@ -70,6 +75,11 @@ function pipeStackCount(diameterIn: number): number {
   return 1;
 }
 
+/** Inches of strap/breathing room added around each non-boxable piece on deck. */
+const SEPARATION_IN = 4;
+/** Vertical clearance left between stacked curbs for dunnage. */
+const STACK_GAP_IN = 2;
+
 function packBoxes(pieces: Piece[]): number {
   let vol = 0;
   for (const p of pieces) {
@@ -80,23 +90,107 @@ function packBoxes(pieces: Piece[]): number {
   return vol > 0 ? Math.max(1, Math.ceil(vol / (BOX_VOL_IN3 * BOX_PACK_EFFICIENCY))) : 0;
 }
 
+interface CurbInstance {
+  piece: Piece;
+  length: number;
+  width: number;
+  height: number;
+  footprint: number;
+}
+
+function expandCurbs(pieces: Piece[]): CurbInstance[] {
+  const out: CurbInstance[] = [];
+  for (const p of pieces) {
+    if (!isRoofCurb(p)) continue;
+    const d = effectiveDims(p);
+    for (let i = 0; i < p.qty; i++) {
+      out.push({
+        piece: p,
+        length: d.length,
+        width: d.width,
+        height: d.height,
+        footprint: d.length * d.width,
+      });
+    }
+  }
+  return out;
+}
+
+interface CurbStack {
+  /** Footprint inches² consumed on the deck (largest piece in the stack). */
+  footprint: number;
+  /** Top piece L×W — anything stacked above must fit within this. */
+  topLength: number;
+  topWidth: number;
+  /** Combined stack height including dunnage gaps. */
+  heightUsed: number;
+  count: number;
+}
+
+/**
+ * Greedy stack: sort curbs largest-footprint first, then for each remaining
+ * curb try to place it on top of an existing stack where (a) its footprint
+ * fits within the current top piece and (b) combined height + dunnage stays
+ * under the trailer's max load height. Otherwise start a new stack.
+ */
+function stackCurbs(curbs: CurbInstance[], maxHeightIn: number): CurbStack[] {
+  const sorted = [...curbs].sort((a, b) => b.footprint - a.footprint);
+  const stacks: CurbStack[] = [];
+  for (const c of sorted) {
+    let placed = false;
+    for (const s of stacks) {
+      const fitsFootprint = c.length <= s.topLength && c.width <= s.topWidth;
+      const fitsHeight = s.heightUsed + STACK_GAP_IN + c.height <= maxHeightIn;
+      if (fitsFootprint && fitsHeight) {
+        s.heightUsed += STACK_GAP_IN + c.height;
+        s.topLength = c.length;
+        s.topWidth = c.width;
+        s.count += 1;
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) {
+      stacks.push({
+        footprint: c.footprint,
+        topLength: c.length,
+        topWidth: c.width,
+        heightUsed: c.height,
+        count: 1,
+      });
+    }
+  }
+  return stacks;
+}
+
+/** Footprint after adding a strap/separation perimeter buffer. */
+function withSeparation(length: number, width: number): number {
+  return (length + SEPARATION_IN) * (width + SEPARATION_IN);
+}
+
 /**
  * Floor area in square inches needed on the trailer deck,
- * accounting for stacking pipes and boxes.
+ * accounting for stacking pipes, curbs, and boxes.
  */
-function floorAreaIn2(pieces: Piece[], boxes: number): number {
+function floorAreaIn2(pieces: Piece[], boxes: number, maxHeightIn: number): number {
   let area = 0;
   for (const p of pieces) {
-    if (isBoxable(p)) continue;
+    if (isBoxable(p) || isRoofCurb(p)) continue;
     const d = effectiveDims(p);
     const footprint = d.length * d.width;
     if (isPipe(p)) {
       const diameter = Math.max(d.width, d.height);
       const stack = pipeStackCount(diameter);
-      area += (footprint * p.qty) / stack;
+      area += (withSeparation(d.length, d.width) * p.qty) / stack;
     } else {
-      area += footprint * p.qty;
+      area += withSeparation(d.length, d.width) * p.qty;
     }
+  }
+  const stacks = stackCurbs(expandCurbs(pieces), maxHeightIn);
+  for (const s of stacks) {
+    // Use separation buffer based on a square root of footprint as proxy dims.
+    const side = Math.sqrt(s.footprint);
+    area += withSeparation(side, side);
   }
   area += (boxes * BOX_FOOTPRINT_IN2) / BOX_STACK;
   return area;
