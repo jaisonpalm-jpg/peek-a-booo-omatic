@@ -66,8 +66,15 @@ function fitsInBox(piece: Piece): boolean {
   return dims[0] <= box[0] && dims[1] <= box[1] && dims[2] <= box[2];
 }
 
+function isNeopreneGasket(p: Piece): boolean {
+  const s = p.description.toLowerCase();
+  return /neoprene|gasket/.test(s);
+}
+
 function isBoxable(piece: Piece): boolean {
   if (isRoofCurb(piece)) return false;
+  // Neoprene gaskets ship as coiled 25ft rolls and always box.
+  if (isNeopreneGasket(piece)) return true;
   if (!fitsInBox(piece)) return false;
   if (!isPipe(piece)) return true;
   const d = effectiveDims(piece);
