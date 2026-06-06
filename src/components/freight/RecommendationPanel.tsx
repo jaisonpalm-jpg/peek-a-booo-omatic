@@ -147,7 +147,7 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
       </div>
 
       <div className="bg-card ring-2 ring-rule">
-        <div className="flex border-b-2 border-rule">
+        <div className={`flex border-b-2 border-rule ${!hasEnclosed ? "hidden" : ""}`}>
           <button
             type="button"
             onClick={() => setTab("enclosed")}
