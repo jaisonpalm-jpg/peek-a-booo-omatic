@@ -125,6 +125,7 @@ interface CurbStack {
   /** Combined stack height including dunnage gaps. */
   heightUsed: number;
   count: number;
+  layers: CurbInstance[];
 }
 
 /**
@@ -146,6 +147,7 @@ function stackCurbs(curbs: CurbInstance[], maxHeightIn: number): CurbStack[] {
         s.topLength = c.length;
         s.topWidth = c.width;
         s.count += 1;
+        s.layers.push(c);
         placed = true;
         break;
       }
@@ -157,6 +159,7 @@ function stackCurbs(curbs: CurbInstance[], maxHeightIn: number): CurbStack[] {
         topWidth: c.width,
         heightUsed: c.height,
         count: 1,
+        layers: [c],
       });
     }
   }
