@@ -96,13 +96,25 @@ const SEPARATION_IN = 4;
 /** Vertical clearance left between stacked curbs for dunnage. */
 const STACK_GAP_IN = 2;
 
-function packBoxes(pieces: Piece[]): number {
+interface BoxBreakdown {
+  total: number;
+  gasketBoxes: number;
+  fillerBoxes: number;
+  gasketPallets: number;
+}
+
+// 48x40 standard pallet; one 36x36 box per layer, stacked 2 high = 2 boxes/pallet.
+const PALLET_L = 48;
+const PALLET_W = 40;
+const PALLET_FOOTPRINT_IN2 = PALLET_L * PALLET_W;
+const BOXES_PER_PALLET = 2;
+
+function packBoxes(pieces: Piece[]): BoxBreakdown {
   let vol = 0;
   let gasketBoxes = 0;
   for (const p of pieces) {
     if (!isBoxable(p)) continue;
     if (isNeopreneGasket(p)) {
-      // Coiled 25ft rolls — one box per roll.
       gasketBoxes += p.qty;
       continue;
     }
@@ -110,7 +122,8 @@ function packBoxes(pieces: Piece[]): number {
     vol += d.length * d.width * d.height * p.qty;
   }
   const fillerBoxes = vol > 0 ? Math.max(1, Math.ceil(vol / (BOX_VOL_IN3 * BOX_PACK_EFFICIENCY))) : 0;
-  return gasketBoxes + fillerBoxes;
+  const gasketPallets = gasketBoxes > 0 ? Math.ceil(gasketBoxes / BOXES_PER_PALLET) : 0;
+  return { total: gasketBoxes + fillerBoxes, gasketBoxes, fillerBoxes, gasketPallets };
 }
 
 interface CurbInstance {
