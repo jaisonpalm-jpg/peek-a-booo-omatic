@@ -15,7 +15,7 @@ function fmt(n: number, digits = 0): string {
 }
 
 export function RecommendationPanel({ rec }: RecommendationPanelProps) {
-  const { trailer, totals, oversize, withinLegalLimits, utilizationPct, deckAreaPct, alternates, candidates, notes } = rec;
+  const { trailer, totals, oversize, withinLegalLimits, utilizationPct, deckAreaPct, alternates, candidates, notes, confidence, reason } = rec;
   const [tab, setTab] = useState<"enclosed" | "open">("enclosed");
 
   return (
