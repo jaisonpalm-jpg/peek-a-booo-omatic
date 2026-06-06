@@ -265,6 +265,15 @@ export function recommend(pieces: Piece[]): Recommendation {
   if (boxes > 0) {
     notes.push(`${boxes} packing box${boxes === 1 ? "" : "es"} (36"x36"x24") estimated, stacked 2 high.`);
   }
+  const curbStacks = best?.curbStacks ?? candidates.at(-1)?.curbStacks ?? [];
+  const totalCurbs = curbStacks.reduce((n, s) => n + s.count, 0);
+  if (totalCurbs > 0) {
+    const stacked = curbStacks.filter((s) => s.count > 1).length;
+    notes.push(
+      `${totalCurbs} roof curb${totalCurbs === 1 ? "" : "s"} arranged in ${curbStacks.length} deck position${curbStacks.length === 1 ? "" : "s"}${stacked > 0 ? ` (${stacked} stacked with 2\" dunnage gaps)` : ""}.`,
+    );
+  }
+  notes.push(`Pieces separated by ${SEPARATION_IN}" strap/breathing room on the deck.`);
   notes.push("Pipes ≤6\" stack 3 high, ≤12\" stack 2 high, larger lay flat.");
 
   return {
