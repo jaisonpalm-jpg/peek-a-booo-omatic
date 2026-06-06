@@ -204,7 +204,12 @@ function toCurbStackViews(stacks: CurbStack[]): CurbStackView[] {
  * Floor area in square inches needed on the trailer deck,
  * accounting for stacking pipes, curbs, and boxes.
  */
-function floorAreaIn2(pieces: Piece[], boxes: number, maxHeightIn: number): number {
+function floorAreaIn2(
+  pieces: Piece[],
+  boxes: number,
+  maxHeightIn: number,
+  maxStackCount = Number.POSITIVE_INFINITY,
+): number {
   let area = 0;
   for (const p of pieces) {
     if (isBoxable(p) || isRoofCurb(p)) continue;
@@ -218,7 +223,7 @@ function floorAreaIn2(pieces: Piece[], boxes: number, maxHeightIn: number): numb
       area += withSeparation(d.length, d.width) * p.qty;
     }
   }
-  const stacks = stackCurbs(expandCurbs(pieces), maxHeightIn);
+  const stacks = stackCurbs(expandCurbs(pieces), maxHeightIn, maxStackCount);
   for (const s of stacks) {
     // Use separation buffer based on a square root of footprint as proxy dims.
     const side = Math.sqrt(s.footprint);
