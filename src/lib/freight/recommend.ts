@@ -96,13 +96,25 @@ const SEPARATION_IN = 4;
 /** Vertical clearance left between stacked curbs for dunnage. */
 const STACK_GAP_IN = 2;
 
-function packBoxes(pieces: Piece[]): number {
+interface BoxBreakdown {
+  total: number;
+  gasketBoxes: number;
+  fillerBoxes: number;
+  gasketPallets: number;
+}
+
+// 48x40 standard pallet; one 36x36 box per layer, stacked 2 high = 2 boxes/pallet.
+const PALLET_L = 48;
+const PALLET_W = 40;
+const PALLET_FOOTPRINT_IN2 = PALLET_L * PALLET_W;
+const BOXES_PER_PALLET = 2;
+
+function packBoxes(pieces: Piece[]): BoxBreakdown {
   let vol = 0;
   let gasketBoxes = 0;
   for (const p of pieces) {
     if (!isBoxable(p)) continue;
     if (isNeopreneGasket(p)) {
-      // Coiled 25ft rolls — one box per roll.
       gasketBoxes += p.qty;
       continue;
     }
@@ -110,7 +122,8 @@ function packBoxes(pieces: Piece[]): number {
     vol += d.length * d.width * d.height * p.qty;
   }
   const fillerBoxes = vol > 0 ? Math.max(1, Math.ceil(vol / (BOX_VOL_IN3 * BOX_PACK_EFFICIENCY))) : 0;
-  return gasketBoxes + fillerBoxes;
+  const gasketPallets = gasketBoxes > 0 ? Math.ceil(gasketBoxes / BOXES_PER_PALLET) : 0;
+  return { total: gasketBoxes + fillerBoxes, gasketBoxes, fillerBoxes, gasketPallets };
 }
 
 interface CurbInstance {
@@ -220,7 +233,7 @@ function toCurbStackViews(stacks: CurbStack[]): CurbStackView[] {
  */
 function floorAreaIn2(
   pieces: Piece[],
-  boxes: number,
+  boxes: BoxBreakdown,
   maxHeightIn: number,
   maxStackCount = Number.POSITIVE_INFINITY,
 ): number {
@@ -228,7 +241,6 @@ function floorAreaIn2(
   for (const p of pieces) {
     if (isBoxable(p) || isRoofCurb(p)) continue;
     const d = effectiveDims(p);
-    const footprint = d.length * d.width;
     if (isPipe(p)) {
       const diameter = Math.max(d.width, d.height);
       const stack = pipeStackCount(diameter);
@@ -239,11 +251,12 @@ function floorAreaIn2(
   }
   const stacks = stackCurbs(expandCurbs(pieces), maxHeightIn, maxStackCount);
   for (const s of stacks) {
-    // Use separation buffer based on a square root of footprint as proxy dims.
     const side = Math.sqrt(s.footprint);
     area += withSeparation(side, side);
   }
-  area += (boxes * BOX_FOOTPRINT_IN2) / BOX_STACK;
+  // Filler boxes ride loose, stacked 2 high. Gasket boxes ride on 48x40 pallets.
+  area += (boxes.fillerBoxes * BOX_FOOTPRINT_IN2) / BOX_STACK;
+  area += boxes.gasketPallets * PALLET_FOOTPRINT_IN2;
   return area;
 }
 
@@ -334,7 +347,8 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
     longestIn,
     widestIn,
     tallestIn,
-    boxes,
+    boxes: boxes.total,
+    gasketPallets: boxes.gasketPallets,
     weightLb: totalWeightLb,
     insulated,
     unstackedLinearFt: 0,
@@ -357,8 +371,13 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
   } else if (!best) {
     notes.push("Load exceeds the 53' dry van — split shipment or use a flatbed.");
   }
-  if (boxes > 0) {
-    notes.push(`${boxes} packing box${boxes === 1 ? "" : "es"} (36"x36"x24") estimated, stacked 2 high.`);
+  if (boxes.fillerBoxes > 0) {
+    notes.push(`${boxes.fillerBoxes} packing box${boxes.fillerBoxes === 1 ? "" : "es"} (36"x36"x24") estimated, stacked 2 high.`);
+  }
+  if (boxes.gasketBoxes > 0) {
+    notes.push(
+      `${boxes.gasketBoxes} neoprene gasket roll box${boxes.gasketBoxes === 1 ? "" : "es"} palletized on ${boxes.gasketPallets} 48"x40" pallet${boxes.gasketPallets === 1 ? "" : "s"} (2 boxes/pallet).`,
+    );
   }
   const curbStacks = best?.curbStacks ?? candidates.at(-1)?.curbStacks ?? [];
   const totalCurbs = curbStacks.reduce((n, s) => n + s.count, 0);
