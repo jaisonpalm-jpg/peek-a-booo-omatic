@@ -15,7 +15,7 @@ function fmt(n: number, digits = 0): string {
 }
 
 export function RecommendationPanel({ rec }: RecommendationPanelProps) {
-  const { trailer, totals, oversize, withinLegalLimits, utilizationPct, deckAreaPct, alternates, candidates, notes } = rec;
+  const { trailer, totals, oversize, withinLegalLimits, utilizationPct, deckAreaPct, alternates, candidates, notes, confidence, reason } = rec;
   const [tab, setTab] = useState<"enclosed" | "open">("enclosed");
 
   return (
@@ -49,6 +49,25 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
           {trailer && (
             <p className="text-sm text-muted-foreground mt-1.5">{trailer.description}</p>
           )}
+          {trailer && (
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Confidence
+                </span>
+                <span className="text-sm font-mono font-bold">{Math.round(confidence)}%</span>
+              </div>
+              <div className="w-full h-1.5 bg-secondary overflow-hidden">
+                <div
+                  className={`h-full transition-all ${
+                    confidence >= 80 ? "bg-success" : confidence >= 60 ? "bg-primary" : "bg-warning"
+                  }`}
+                  style={{ width: `${Math.min(100, confidence)}%` }}
+                />
+              </div>
+              <p className="text-xs text-foreground/80 leading-snug pt-1">{reason}</p>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-px bg-border">
@@ -80,6 +99,12 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
             value={fmt(totals.tallestIn / 12, 1)}
             unit="ft"
           />
+          {totals.weightLb > 0 && (
+            <Stat label="Weight" value={fmt(totals.weightLb)} unit="lb" />
+          )}
+          {totals.insulated && (
+            <Stat label="Insulated" value="Yes" unit="weather-sensitive" />
+          )}
         </div>
 
         {trailer && (

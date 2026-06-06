@@ -11,6 +11,10 @@ export interface Piece {
   height: number;
   qty: number;
   orientation: Orientation;
+  /** Per-piece weight in POUNDS (optional). */
+  weight?: number;
+  /** True if the piece is insulated / weather-sensitive (drives Conestoga pick). */
+  insulated?: boolean;
 }
 
 export interface EffectiveDims {
@@ -98,7 +102,15 @@ export interface Recommendation {
     tallestIn: number;
     /** Estimated 36"x36"x24" boxes needed to hold fittings + short pipe. */
     boxes: number;
+    /** Sum of all piece weights in pounds (0 when no weights provided). */
+    weightLb: number;
+    /** True when any piece on the load is marked insulated/weather-sensitive. */
+    insulated: boolean;
   };
+  /** 0–100 score indicating how confident the engine is in this pick. */
+  confidence: number;
+  /** Natural-language explanation of why this trailer was chosen. */
+  reason: string;
   /** Percentage of selected trailer's deck floor area occupied by piece footprints. */
   deckAreaPct: number;
   oversize: OversizeFlag[];

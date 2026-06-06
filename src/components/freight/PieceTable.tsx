@@ -52,6 +52,8 @@ export function PieceTable({ pieces, onChange }: PieceTableProps) {
         height: 0,
         qty: 1,
         orientation: "as-entered",
+        weight: 0,
+        insulated: false,
       },
     ]);
   }
@@ -83,6 +85,12 @@ export function PieceTable({ pieces, onChange }: PieceTableProps) {
               <th className="px-2 py-3 font-bold text-muted-foreground uppercase tracking-tight text-xs">
                 Qty
               </th>
+              <th className="px-2 py-3 font-bold text-muted-foreground uppercase tracking-tight text-xs">
+                Wt (lb)
+              </th>
+              <th className="px-2 py-3 font-bold text-muted-foreground uppercase tracking-tight text-xs text-center">
+                Ins
+              </th>
               <th className="px-2 py-3 font-bold text-muted-foreground uppercase tracking-tight text-xs text-center">
                 Orient
               </th>
@@ -92,7 +100,7 @@ export function PieceTable({ pieces, onChange }: PieceTableProps) {
           <tbody className="divide-y divide-border">
             {pieces.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground text-sm">
+                <td colSpan={9} className="px-4 py-10 text-center text-muted-foreground text-sm">
                   No pieces yet. Add a row to start estimating.
                 </td>
               </tr>
@@ -126,6 +134,16 @@ export function PieceTable({ pieces, onChange }: PieceTableProps) {
                   <NumCell value={p.width} onChange={(v) => update(p.id, { width: v })} />
                   <NumCell value={p.height} onChange={(v) => update(p.id, { height: v })} />
                   <NumCell value={p.qty} onChange={(v) => update(p.id, { qty: v })} min={1} />
+                  <NumCell value={p.weight ?? 0} onChange={(v) => update(p.id, { weight: v })} />
+                  <td className="px-2 py-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={!!p.insulated}
+                      onChange={(e) => update(p.id, { insulated: e.target.checked })}
+                      aria-label="Insulated / weather-sensitive"
+                      className="size-4 accent-primary cursor-pointer"
+                    />
+                  </td>
                   <td className="px-2 py-3 text-center">
                     <button
                       type="button"
