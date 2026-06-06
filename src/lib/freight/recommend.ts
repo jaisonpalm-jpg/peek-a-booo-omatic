@@ -143,7 +143,11 @@ interface CurbStack {
  * fits within the current top piece and (b) combined height + dunnage stays
  * under the trailer's max load height. Otherwise start a new stack.
  */
-function stackCurbs(curbs: CurbInstance[], maxHeightIn: number): CurbStack[] {
+function stackCurbs(
+  curbs: CurbInstance[],
+  maxHeightIn: number,
+  maxStackCount = Number.POSITIVE_INFINITY,
+): CurbStack[] {
   const sorted = [...curbs].sort((a, b) => b.footprint - a.footprint);
   const stacks: CurbStack[] = [];
   for (const c of sorted) {
@@ -151,7 +155,8 @@ function stackCurbs(curbs: CurbInstance[], maxHeightIn: number): CurbStack[] {
     for (const s of stacks) {
       const fitsFootprint = c.length <= s.topLength && c.width <= s.topWidth;
       const fitsHeight = s.heightUsed + STACK_GAP_IN + c.height <= maxHeightIn;
-      if (fitsFootprint && fitsHeight) {
+      const fitsCount = s.count < maxStackCount;
+      if (fitsFootprint && fitsHeight && fitsCount) {
         s.heightUsed += STACK_GAP_IN + c.height;
         s.topLength = c.length;
         s.topWidth = c.width;
