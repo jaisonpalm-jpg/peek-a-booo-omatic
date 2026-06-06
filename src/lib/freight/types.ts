@@ -54,12 +54,33 @@ export interface OversizeFlag {
   detail: string;
 }
 
+export interface CurbStackLayer {
+  description: string;
+  length: number;
+  width: number;
+  height: number;
+  oversize: boolean;
+}
+
+export interface CurbStackView {
+  /** Bottom-up ordered layers in the stack. */
+  layers: CurbStackLayer[];
+  /** Combined stack height including 2" dunnage gaps. */
+  heightIn: number;
+  /** Largest footprint (bottom layer L×W) in inches². */
+  footprintIn2: number;
+  /** Strap/separation buffer applied around the base, inches. */
+  separationIn: number;
+}
+
 export interface CandidateBreakdown {
   trailer: TrailerSpec;
   fits: boolean;
   utilizationPct: number;
   deckAreaPct: number;
   linearFt: number;
+  /** Per-trailer curb stack layout (max-height dependent). */
+  curbStacks: CurbStackView[];
 }
 
 export interface Recommendation {
