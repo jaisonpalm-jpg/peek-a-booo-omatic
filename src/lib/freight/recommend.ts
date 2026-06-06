@@ -66,8 +66,15 @@ function fitsInBox(piece: Piece): boolean {
   return dims[0] <= box[0] && dims[1] <= box[1] && dims[2] <= box[2];
 }
 
+function isNeopreneGasket(p: Piece): boolean {
+  const s = p.description.toLowerCase();
+  return /neoprene|gasket/.test(s);
+}
+
 function isBoxable(piece: Piece): boolean {
   if (isRoofCurb(piece)) return false;
+  // Neoprene gaskets ship as coiled 25ft rolls and always box.
+  if (isNeopreneGasket(piece)) return true;
   if (!fitsInBox(piece)) return false;
   if (!isPipe(piece)) return true;
   const d = effectiveDims(piece);
@@ -91,12 +98,19 @@ const STACK_GAP_IN = 2;
 
 function packBoxes(pieces: Piece[]): number {
   let vol = 0;
+  let gasketBoxes = 0;
   for (const p of pieces) {
     if (!isBoxable(p)) continue;
+    if (isNeopreneGasket(p)) {
+      // Coiled 25ft rolls — one box per roll.
+      gasketBoxes += p.qty;
+      continue;
+    }
     const d = effectiveDims(p);
     vol += d.length * d.width * d.height * p.qty;
   }
-  return vol > 0 ? Math.max(1, Math.ceil(vol / (BOX_VOL_IN3 * BOX_PACK_EFFICIENCY))) : 0;
+  const fillerBoxes = vol > 0 ? Math.max(1, Math.ceil(vol / (BOX_VOL_IN3 * BOX_PACK_EFFICIENCY))) : 0;
+  return gasketBoxes + fillerBoxes;
 }
 
 interface CurbInstance {
