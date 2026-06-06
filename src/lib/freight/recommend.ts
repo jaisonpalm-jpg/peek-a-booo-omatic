@@ -323,7 +323,19 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
     boxes,
     weightLb: totalWeightLb,
     insulated,
+    unstackedLinearFt: 0,
+    savedLinearFt: 0,
   };
+
+  // Compute "if not stacked" length against the selected trailer's deck width
+  // so the saved-length figure reflects the real chosen equipment.
+  const refTrailer = best?.trailer ?? candidates.at(-1)?.trailer;
+  if (refTrailer) {
+    const unstackedIn2 = floorAreaIn2(validPieces, boxes, refTrailer.maxHeight, 1);
+    totals.unstackedLinearFt = unstackedIn2 / refTrailer.deckWidth / 12;
+    totals.savedLinearFt = Math.max(0, totals.unstackedLinearFt - totals.linearFt);
+  }
+
 
   const notes: string[] = [];
   if (validPieces.length === 0) {

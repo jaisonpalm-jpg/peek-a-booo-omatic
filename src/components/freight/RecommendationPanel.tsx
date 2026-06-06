@@ -106,6 +106,14 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
           {totals.insulated && (
             <Stat label="Insulated" value="Yes" unit="weather-sensitive" />
           )}
+          {totals.savedLinearFt > 0.05 && (
+            <Stat
+              label="Saved by Stacking"
+              value={fmt(totals.savedLinearFt, 1)}
+              unit={`ft (vs ${fmt(totals.unstackedLinearFt, 1)} flat)`}
+            />
+          )}
+
         </div>
 
         {trailer && (

@@ -106,7 +106,12 @@ export interface Recommendation {
     weightLb: number;
     /** True when any piece on the load is marked insulated/weather-sensitive. */
     insulated: boolean;
+    /** Linear feet the load would need if curbs were NOT stacked (stack = 1). */
+    unstackedLinearFt: number;
+    /** Linear feet saved by the selected curb-stack setting. */
+    savedLinearFt: number;
   };
+
   /** 0–100 score indicating how confident the engine is in this pick. */
   confidence: number;
   /** Natural-language explanation of why this trailer was chosen. */
