@@ -109,19 +109,24 @@ const PALLET_W = 40;
 const PALLET_FOOTPRINT_IN2 = PALLET_L * PALLET_W;
 const BOXES_PER_PALLET = 4;
 
+// Coiled 25ft neoprene gasket rolls modeled as ~14" OD x 4" thick cylinders.
+// Box interior 36x36x24: 2x2 coils per layer (14" ea) x 6 layers (24"/4") = 24 rolls/box.
+const GASKET_ROLLS_PER_BOX = 24;
+
 function packBoxes(pieces: Piece[]): BoxBreakdown {
   let vol = 0;
-  let gasketBoxes = 0;
+  let gasketRolls = 0;
   for (const p of pieces) {
     if (!isBoxable(p)) continue;
     if (isNeopreneGasket(p)) {
-      gasketBoxes += p.qty;
+      gasketRolls += p.qty;
       continue;
     }
     const d = effectiveDims(p);
     vol += d.length * d.width * d.height * p.qty;
   }
   const fillerBoxes = vol > 0 ? Math.max(1, Math.ceil(vol / (BOX_VOL_IN3 * BOX_PACK_EFFICIENCY))) : 0;
+  const gasketBoxes = gasketRolls > 0 ? Math.ceil(gasketRolls / GASKET_ROLLS_PER_BOX) : 0;
   const gasketPallets = gasketBoxes > 0 ? Math.ceil(gasketBoxes / BOXES_PER_PALLET) : 0;
   return { total: gasketBoxes + fillerBoxes, gasketBoxes, fillerBoxes, gasketPallets };
 }
