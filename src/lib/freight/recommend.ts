@@ -58,10 +58,19 @@ function isRoofCurb(p: Piece): boolean {
   return /\bcurb\b|adaptor|adapter/.test(p.description.toLowerCase());
 }
 
-function isBoxable(piece: Piece): boolean {
+/** Does a piece physically fit inside a single 36×36×24 box in any orientation? */
+function fitsInBox(piece: Piece): boolean {
   const d = effectiveDims(piece);
+  const dims = [d.length, d.width, d.height].sort((a, b) => a - b);
+  const box = [BOX_H, BOX_W, BOX_L].sort((a, b) => a - b); // [24, 36, 36]
+  return dims[0] <= box[0] && dims[1] <= box[1] && dims[2] <= box[2];
+}
+
+function isBoxable(piece: Piece): boolean {
   if (isRoofCurb(piece)) return false;
+  if (!fitsInBox(piece)) return false;
   if (!isPipe(piece)) return true;
+  const d = effectiveDims(piece);
   return d.length < 30;
 }
 
