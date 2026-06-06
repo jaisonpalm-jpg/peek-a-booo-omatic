@@ -1,10 +1,10 @@
 import { FEDERAL_LIMITS, TRAILERS } from "./trailers";
 import type {
+  CurbStackView,
   EffectiveDims,
   OversizeFlag,
   Piece,
   Recommendation,
-  TrailerSpec,
 } from "./types";
 
 /** Returns effective L×W×H in inches after applying orientation. */
@@ -125,6 +125,7 @@ interface CurbStack {
   /** Combined stack height including dunnage gaps. */
   heightUsed: number;
   count: number;
+  layers: CurbInstance[];
 }
 
 /**
@@ -146,6 +147,7 @@ function stackCurbs(curbs: CurbInstance[], maxHeightIn: number): CurbStack[] {
         s.topLength = c.length;
         s.topWidth = c.width;
         s.count += 1;
+        s.layers.push(c);
         placed = true;
         break;
       }
@@ -157,6 +159,7 @@ function stackCurbs(curbs: CurbInstance[], maxHeightIn: number): CurbStack[] {
         topWidth: c.width,
         heightUsed: c.height,
         count: 1,
+        layers: [c],
       });
     }
   }
@@ -166,6 +169,21 @@ function stackCurbs(curbs: CurbInstance[], maxHeightIn: number): CurbStack[] {
 /** Footprint after adding a strap/separation perimeter buffer. */
 function withSeparation(length: number, width: number): number {
   return (length + SEPARATION_IN) * (width + SEPARATION_IN);
+}
+
+function toCurbStackViews(stacks: CurbStack[]): CurbStackView[] {
+  return stacks.map((s) => ({
+    heightIn: s.heightUsed,
+    footprintIn2: s.footprint,
+    separationIn: SEPARATION_IN,
+    layers: s.layers.map((l) => ({
+      description: l.piece.description,
+      length: l.length,
+      width: l.width,
+      height: l.height,
+      oversize: flagsForPiece(l.piece).length > 0,
+    })),
+  }));
 }
 
 /**
@@ -284,6 +302,7 @@ export function recommend(pieces: Piece[]): Recommendation {
       utilizationPct: c.utilizationPct,
       deckAreaPct: c.deckAreaPct,
       linearFt: c.linearFt,
+      curbStacks: toCurbStackViews(c.curbStacks),
     })),
     alternates: candidates
       .filter((c) => c.fits && c.trailer.id !== best?.trailer.id)

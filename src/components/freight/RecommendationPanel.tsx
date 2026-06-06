@@ -1,5 +1,6 @@
 import { AlertTriangle, CheckCircle2, Truck } from "lucide-react";
 import type { Recommendation } from "@/lib/freight/types";
+import { CurbStackDiagram } from "./CurbStackDiagram";
 
 interface RecommendationPanelProps {
   rec: Recommendation;
@@ -165,6 +166,44 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {candidates.some((c) => c.curbStacks.length > 0) && (
+        <div className="bg-card ring-2 ring-rule">
+          <div className="p-4 border-b-2 border-rule">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Curb Stacking Per Trailer
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Height-limited stacking — taller decks fit more layers. 4&quot; strap buffer
+              shown dashed around each base; 2&quot; dunnage gap between layers.
+            </p>
+          </div>
+          <div className="divide-y-2 divide-rule">
+            {candidates
+              .filter((c) => c.curbStacks.length > 0)
+              .map((c) => {
+                const isPick = trailer?.id === c.trailer.id;
+                return (
+                  <div key={c.trailer.id} className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-bold">{c.trailer.name}</p>
+                      <span className="text-[10px] font-mono text-muted-foreground uppercase">
+                        max {(c.trailer.maxHeight / 12).toFixed(1)}&apos; tall
+                        {isPick && (
+                          <span className="ml-2 text-success font-bold">· pick</span>
+                        )}
+                      </span>
+                    </div>
+                    <CurbStackDiagram
+                      stacks={c.curbStacks}
+                      maxHeightIn={c.trailer.maxHeight}
+                    />
+                  </div>
+                );
+              })}
           </div>
         </div>
       )}
