@@ -11,6 +11,10 @@ export interface Piece {
   height: number;
   qty: number;
   orientation: Orientation;
+  /** Per-piece weight in POUNDS (optional). */
+  weight?: number;
+  /** True if the piece is insulated / weather-sensitive (drives Conestoga pick). */
+  insulated?: boolean;
 }
 
 export interface EffectiveDims {
