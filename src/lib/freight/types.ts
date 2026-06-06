@@ -100,8 +100,10 @@ export interface Recommendation {
     longestIn: number;
     widestIn: number;
     tallestIn: number;
-    /** Estimated 36"x36"x24" boxes needed to hold fittings + short pipe. */
+    /** Estimated 36"x36"x24" boxes needed (includes gasket roll boxes). */
     boxes: number;
+    /** 48"x40" pallets used to ship neoprene gasket boxes (2 boxes per pallet). */
+    gasketPallets: number;
     /** Sum of all piece weights in pounds (0 when no weights provided). */
     weightLb: number;
     /** True when any piece on the load is marked insulated/weather-sensitive. */
