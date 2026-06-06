@@ -156,6 +156,28 @@ function EstimatorPage() {
               </section>
 
               <aside className="lg:col-span-5 lg:sticky lg:top-24 lg:self-start space-y-6">
+                <div className="bg-card ring-2 ring-rule p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <label htmlFor="curb-stack" className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                      Max Curbs / Stack
+                    </label>
+                    <span className="font-mono text-sm font-bold">{maxCurbStack}</span>
+                  </div>
+                  <input
+                    id="curb-stack"
+                    type="range"
+                    min={1}
+                    max={6}
+                    step={1}
+                    value={maxCurbStack}
+                    onChange={(e) => setMaxCurbStack(Number(e.target.value))}
+                    className="w-full accent-foreground"
+                  />
+                  <p className="text-[11px] text-muted-foreground leading-snug">
+                    Curb adapters stack on flatbeds with 2&quot; dunnage gaps. Trailer max load
+                    height still caps the stack regardless of this setting.
+                  </p>
+                </div>
                 <RecommendationPanel rec={rec} />
               </aside>
 
