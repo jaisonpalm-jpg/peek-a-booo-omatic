@@ -370,8 +370,13 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
   } else if (!best) {
     notes.push("Load exceeds the 53' dry van — split shipment or use a flatbed.");
   }
-  if (boxes > 0) {
-    notes.push(`${boxes} packing box${boxes === 1 ? "" : "es"} (36"x36"x24") estimated, stacked 2 high.`);
+  if (boxes.fillerBoxes > 0) {
+    notes.push(`${boxes.fillerBoxes} packing box${boxes.fillerBoxes === 1 ? "" : "es"} (36"x36"x24") estimated, stacked 2 high.`);
+  }
+  if (boxes.gasketBoxes > 0) {
+    notes.push(
+      `${boxes.gasketBoxes} neoprene gasket roll box${boxes.gasketBoxes === 1 ? "" : "es"} palletized on ${boxes.gasketPallets} 48"x40" pallet${boxes.gasketPallets === 1 ? "" : "s"} (2 boxes/pallet).`,
+    );
   }
   const curbStacks = best?.curbStacks ?? candidates.at(-1)?.curbStacks ?? [];
   const totalCurbs = curbStacks.reduce((n, s) => n + s.count, 0);
