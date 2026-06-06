@@ -287,6 +287,7 @@ export function recommend(pieces: Piece[]): Recommendation {
       utilizationPct: c.utilizationPct,
       deckAreaPct: c.deckAreaPct,
       linearFt: c.linearFt,
+      curbStacks: toCurbStackViews(c.curbStacks),
     })),
     alternates: candidates
       .filter((c) => c.fits && c.trailer.id !== best?.trailer.id)
