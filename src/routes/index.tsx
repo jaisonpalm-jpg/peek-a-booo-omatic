@@ -57,7 +57,8 @@ function EstimatorPage() {
   const pieces = activeJob?.pieces ?? [];
   const jobName = activeJob?.name ?? "";
 
-  const rec = useMemo(() => recommend(pieces), [pieces]);
+  const [maxCurbStack, setMaxCurbStack] = useState<number>(3);
+  const rec = useMemo(() => recommend(pieces, { maxCurbStack }), [pieces, maxCurbStack]);
 
   const setPieces = (next: Piece[] | ((prev: Piece[]) => Piece[])) => {
     if (!activeJob) return;
