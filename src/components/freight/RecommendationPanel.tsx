@@ -120,95 +120,41 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
         )}
       </div>
 
-      {candidates.length > 0 && (
-        <div className="bg-card ring-2 ring-rule">
-          <div className="p-4 border-b-2 border-rule">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              Floor-Area Utilization by Truck
-            </p>
-          </div>
-          <div className="grid grid-cols-3 gap-px bg-border">
-            {candidates.map((c) => {
-              const isPick = trailer?.id === c.trailer.id;
-              return (
-                <div
-                  key={c.trailer.id}
-                  className={`p-4 bg-card ${isPick ? "ring-2 ring-success ring-inset" : ""}`}
-                >
-                  <div className="flex items-center justify-between gap-1 mb-2">
-                    <p className="text-[10px] font-bold uppercase tracking-tight">
-                      {c.trailer.shortName}
-                    </p>
-                    {isPick && (
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-success">
-                        Pick
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-2xl font-semibold tabular-nums">
-                    {Math.round(c.deckAreaPct)}
-                    <span className="text-xs text-muted-foreground font-normal">%</span>
-                  </p>
-                  <div className="w-full h-1.5 bg-secondary overflow-hidden mt-2">
-                    <div
-                      className={`h-full transition-all ${
-                        !c.fits ? "bg-warning" : c.deckAreaPct > 90 ? "bg-warning" : "bg-success"
-                      }`}
-                      style={{ width: `${Math.min(100, c.deckAreaPct)}%` }}
-                    />
-                  </div>
-                  <p className="text-[10px] text-muted-foreground mt-2 font-mono">
-                    {c.linearFt.toFixed(1)} / {Math.round(c.trailer.deckLength / 12)} ft
-                  </p>
-                  {!c.fits && (
-                    <p className="text-[10px] text-warning font-bold uppercase tracking-widest mt-1">
-                      Won't fit
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+      <div className="bg-card ring-2 ring-rule">
+        <div className="flex border-b-2 border-rule">
+          <button
+            type="button"
+            onClick={() => setTab("enclosed")}
+            className={`flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+              tab === "enclosed"
+                ? "bg-card text-foreground border-b-0"
+                : "bg-secondary text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Box Trucks & Dry Van
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("open")}
+            className={`flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+              tab === "open"
+                ? "bg-card text-foreground border-b-0"
+                : "bg-secondary text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Flatbed / Conestoga / Hotshot
+          </button>
         </div>
-      )}
 
-      {candidates.some((c) => c.curbStacks.length > 0) && (
-        <div className="bg-card ring-2 ring-rule">
-          <div className="p-4 border-b-2 border-rule">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              Curb Stacking Per Trailer
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Height-limited stacking — taller decks fit more layers. 4&quot; strap buffer
-              shown dashed around each base; 2&quot; dunnage gap between layers.
-            </p>
-          </div>
-          <div className="divide-y-2 divide-rule">
-            {candidates
-              .filter((c) => c.curbStacks.length > 0)
-              .map((c) => {
-                const isPick = trailer?.id === c.trailer.id;
-                return (
-                  <div key={c.trailer.id} className="p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-bold">{c.trailer.name}</p>
-                      <span className="text-[10px] font-mono text-muted-foreground uppercase">
-                        max {(c.trailer.maxHeight / 12).toFixed(1)}&apos; tall
-                        {isPick && (
-                          <span className="ml-2 text-success font-bold">· pick</span>
-                        )}
-                      </span>
-                    </div>
-                    <CurbStackDiagram
-                      stacks={c.curbStacks}
-                      maxHeightIn={c.trailer.maxHeight}
-                    />
-                  </div>
-                );
-              })}
-          </div>
+        <div className="p-4">
+          {tab === "enclosed" && (
+            <EnclosedCandidates candidates={candidates} pickId={trailer?.id} />
+          )}
+          {tab === "open" && (
+            <OpenDeckCandidates candidates={candidates} pickId={trailer?.id} />
+          )}
         </div>
-      )}
+      </div>
 
       {notes.length > 0 && (
         <ul className="space-y-2">
