@@ -99,6 +99,12 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
             value={fmt(totals.tallestIn / 12, 1)}
             unit="ft"
           />
+          {totals.weightLb > 0 && (
+            <Stat label="Weight" value={fmt(totals.weightLb)} unit="lb" />
+          )}
+          {totals.insulated && (
+            <Stat label="Insulated" value="Yes" unit="weather-sensitive" />
+          )}
         </div>
 
         {trailer && (
