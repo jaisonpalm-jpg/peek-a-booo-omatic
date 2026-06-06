@@ -1,10 +1,10 @@
 import { FEDERAL_LIMITS, TRAILERS } from "./trailers";
 import type {
+  CurbStackView,
   EffectiveDims,
   OversizeFlag,
   Piece,
   Recommendation,
-  TrailerSpec,
 } from "./types";
 
 /** Returns effective L×W×H in inches after applying orientation. */
