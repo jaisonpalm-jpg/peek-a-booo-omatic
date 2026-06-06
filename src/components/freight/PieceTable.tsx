@@ -134,6 +134,16 @@ export function PieceTable({ pieces, onChange }: PieceTableProps) {
                   <NumCell value={p.width} onChange={(v) => update(p.id, { width: v })} />
                   <NumCell value={p.height} onChange={(v) => update(p.id, { height: v })} />
                   <NumCell value={p.qty} onChange={(v) => update(p.id, { qty: v })} min={1} />
+                  <NumCell value={p.weight ?? 0} onChange={(v) => update(p.id, { weight: v })} />
+                  <td className="px-2 py-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={!!p.insulated}
+                      onChange={(e) => update(p.id, { insulated: e.target.checked })}
+                      aria-label="Insulated / weather-sensitive"
+                      className="size-4 accent-primary cursor-pointer"
+                    />
+                  </td>
                   <td className="px-2 py-3 text-center">
                     <button
                       type="button"
