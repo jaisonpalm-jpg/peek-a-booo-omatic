@@ -171,6 +171,21 @@ function withSeparation(length: number, width: number): number {
   return (length + SEPARATION_IN) * (width + SEPARATION_IN);
 }
 
+function toCurbStackViews(stacks: CurbStack[]): CurbStackView[] {
+  return stacks.map((s) => ({
+    heightIn: s.heightUsed,
+    footprintIn2: s.footprint,
+    separationIn: SEPARATION_IN,
+    layers: s.layers.map((l) => ({
+      description: l.piece.description,
+      length: l.length,
+      width: l.width,
+      height: l.height,
+      oversize: flagsForPiece(l.piece).length > 0,
+    })),
+  }));
+}
+
 /**
  * Floor area in square inches needed on the trailer deck,
  * accounting for stacking pipes, curbs, and boxes.
