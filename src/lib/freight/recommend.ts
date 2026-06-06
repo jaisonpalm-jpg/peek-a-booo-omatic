@@ -103,11 +103,11 @@ interface BoxBreakdown {
   gasketPallets: number;
 }
 
-// 48x40 standard pallet; one 36x36 box per layer, stacked 2 high = 2 boxes/pallet.
+// 48x40 standard pallet; one 36x36 box per layer, stacked 4 high = 4 boxes/pallet.
 const PALLET_L = 48;
 const PALLET_W = 40;
 const PALLET_FOOTPRINT_IN2 = PALLET_L * PALLET_W;
-const BOXES_PER_PALLET = 2;
+const BOXES_PER_PALLET = 4;
 
 function packBoxes(pieces: Piece[]): BoxBreakdown {
   let vol = 0;
@@ -376,7 +376,7 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
   }
   if (boxes.gasketBoxes > 0) {
     notes.push(
-      `${boxes.gasketBoxes} neoprene gasket roll box${boxes.gasketBoxes === 1 ? "" : "es"} palletized on ${boxes.gasketPallets} 48"x40" pallet${boxes.gasketPallets === 1 ? "" : "s"} (2 boxes/pallet).`,
+      `${boxes.gasketBoxes} neoprene gasket roll box${boxes.gasketBoxes === 1 ? "" : "es"} palletized on ${boxes.gasketPallets} 48"x40" pallet${boxes.gasketPallets === 1 ? "" : "s"} (4 boxes/pallet).`,
     );
   }
   const curbStacks = best?.curbStacks ?? candidates.at(-1)?.curbStacks ?? [];
