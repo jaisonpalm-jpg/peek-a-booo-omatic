@@ -12,6 +12,17 @@ const COLORS: Record<DeckItemKind, { top: string; front: string; side: string; f
   "gasket-pallet":{ top: "#16a34a", front: "#15803d", side: "#14532d", flat: "#22c55e", label: "Gasket Pallet" },
 };
 
+function fmtFt(inches: number): string {
+  const ft = inches / 12;
+  if (ft >= 1) return `${ft.toFixed(ft >= 10 ? 0 : 1)}'`;
+  return `${Math.round(inches)}"`;
+}
+
+function fmtLb(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k lb`;
+  return `${Math.round(n)} lb`;
+}
+
 export function TrailerLoadDiagram({ trailer, layout }: Props) {
   if (layout.placements.length === 0) {
     return (
@@ -21,24 +32,22 @@ export function TrailerLoadDiagram({ trailer, layout }: Props) {
     );
   }
 
-  // Distinct item kinds present (for legend)
-  const kindsPresent = Array.from(
-    new Set(layout.placements.map((p) => p.item.kind)),
-  ) as DeckItemKind[];
+  // Legend: kind → {count, weight}
+  const kindStats = new Map<
+    DeckItemKind,
+    { count: number; units: number; weight: number }
+  >();
+  for (const p of layout.placements) {
+    const cur = kindStats.get(p.item.kind) ?? { count: 0, units: 0, weight: 0 };
+    cur.count += 1;
+    cur.units += p.item.units;
+    cur.weight += p.item.weightLb ?? 0;
+    kindStats.set(p.item.kind, cur);
+  }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3 text-[10px] uppercase tracking-widest text-muted-foreground">
-        {kindsPresent.map((k) => (
-          <span key={k} className="flex items-center gap-1.5">
-            <span className="inline-block size-2.5" style={{ backgroundColor: COLORS[k].flat }} />
-            {COLORS[k].label}
-          </span>
-        ))}
-        <span className="ml-auto font-mono">
-          {trailer.deckLength / 12}&apos; × {(trailer.deckWidth / 12).toFixed(1)}&apos; deck
-        </span>
-      </div>
+    <div className="space-y-3">
+      <Legend kindStats={kindStats} layout={layout} trailer={trailer} />
 
       <div className="grid lg:grid-cols-2 gap-4">
         <div className="space-y-1.5">
@@ -58,6 +67,64 @@ export function TrailerLoadDiagram({ trailer, layout }: Props) {
   );
 }
 
+/* ---------------- Legend ---------------- */
+
+function Legend({
+  kindStats,
+  layout,
+  trailer,
+}: {
+  kindStats: Map<DeckItemKind, { count: number; units: number; weight: number }>;
+  layout: DeckLayout;
+  trailer: TrailerSpec;
+}) {
+  return (
+    <div className="border border-rule bg-secondary/30 p-2.5 space-y-2">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px]">
+        {[...kindStats.entries()].map(([k, s]) => (
+          <span key={k} className="flex items-center gap-1.5 font-mono">
+            <span
+              className="inline-block size-3 border border-black/30"
+              style={{ backgroundColor: COLORS[k].flat }}
+            />
+            <span className="font-bold uppercase tracking-widest">{COLORS[k].label}</span>
+            <span className="text-muted-foreground">
+              {s.count} block{s.count === 1 ? "" : "s"}
+              {s.units !== s.count ? ` · ${s.units} units` : ""}
+              {s.weight > 0 ? ` · ${fmtLb(s.weight)}` : ""}
+            </span>
+          </span>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] font-mono text-muted-foreground border-t border-border pt-1.5">
+        <span>
+          Deck <strong className="text-foreground">{trailer.deckLength / 12}&apos;</strong>
+          {" × "}<strong className="text-foreground">{(trailer.deckWidth / 12).toFixed(1)}&apos;</strong>
+        </span>
+        <span>
+          Used <strong className="text-foreground">{fmtFt(layout.usedLengthIn)}</strong>
+        </span>
+        <span>
+          Overhang{" "}
+          <strong className={layout.totalOverhangIn > 0 ? "text-warning" : "text-foreground"}>
+            {fmtFt(layout.totalOverhangIn)}
+          </strong>
+        </span>
+        {layout.weightLb > 0 && (
+          <span>
+            Total <strong className="text-foreground">{fmtLb(layout.weightLb)}</strong>
+          </span>
+        )}
+        {layout.unplacedCount > 0 && (
+          <span className="text-warning font-bold">
+            {layout.unplacedCount} unplaced
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ---------------- 2D top-down ---------------- */
 
 function TopDownView({ trailer, layout }: Props) {
@@ -67,8 +134,7 @@ function TopDownView({ trailer, layout }: Props) {
   const scale = (targetW - PAD * 2) / totalLen;
   const deckPxLen = trailer.deckLength * scale;
   const overhangPxLen = trailer.maxOverhang * scale;
-  const deckPxWid = Math.max(40, trailer.deckWidth * scale * 4); // exaggerate width for readability
-  // actual width-scale for items to match deckPxWid
+  const deckPxWid = Math.max(60, trailer.deckWidth * scale * 4);
   const widScale = deckPxWid / trailer.deckWidth;
 
   const svgW = targetW;
@@ -76,18 +142,15 @@ function TopDownView({ trailer, layout }: Props) {
 
   return (
     <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full h-auto bg-secondary/40 border border-border">
-      {/* deck */}
       <rect
         x={PAD}
         y={PAD}
         width={deckPxLen}
         height={deckPxWid}
-        fill="hsl(var(--background) / 0)"
         className="fill-card"
         stroke="currentColor"
         strokeWidth={1.5}
       />
-      {/* overhang zone */}
       {overhangPxLen > 0 && (
         <rect
           x={PAD + deckPxLen}
@@ -109,15 +172,26 @@ function TopDownView({ trailer, layout }: Props) {
 
       {/* cab marker */}
       <rect x={PAD - 8} y={PAD + deckPxWid / 2 - 6} width={6} height={12} className="fill-muted-foreground" />
+      <text
+        x={PAD - 5}
+        y={PAD - 4}
+        fontSize={8}
+        textAnchor="start"
+        className="fill-muted-foreground"
+        fontFamily="monospace"
+      >
+        CAB
+      </text>
 
-      {/* items */}
       {layout.placements.map((p, i) => {
         const c = COLORS[p.item.kind];
         const x = PAD + p.x * scale;
         const y = PAD + p.y * widScale;
         const w = p.item.lengthIn * scale;
         const h = p.item.widthIn * widScale;
-        const showLabel = w > 36 && h > 12;
+        const showPos = w > 18 && h > 10;
+        const showDims = w > 64 && h > 22;
+        const showWeight = !!p.item.weightLb && w > 80 && h > 32;
         return (
           <g key={i}>
             <rect
@@ -129,23 +203,47 @@ function TopDownView({ trailer, layout }: Props) {
               stroke={p.item.oversize ? "#f59e0b" : "rgba(0,0,0,0.4)"}
               strokeWidth={p.item.oversize ? 1.5 : 0.75}
             />
-            {showLabel && (
+            {showPos && (
+              <text
+                x={x + 3}
+                y={y + 10}
+                fontSize={8}
+                textAnchor="start"
+                fill="white"
+                fontFamily="monospace"
+                fontWeight={700}
+              >
+                {p.posLabel}
+              </text>
+            )}
+            {showDims && (
               <text
                 x={x + w / 2}
-                y={y + h / 2 + 3}
-                fontSize={9}
+                y={y + h / 2 + 2}
+                fontSize={8}
                 textAnchor="middle"
                 fill="white"
                 fontFamily="monospace"
               >
-                {p.item.label}
+                {fmtFt(p.item.lengthIn)}×{fmtFt(p.item.widthIn)}
+              </text>
+            )}
+            {showWeight && (
+              <text
+                x={x + w / 2}
+                y={y + h / 2 + 12}
+                fontSize={7}
+                textAnchor="middle"
+                fill="rgba(255,255,255,0.85)"
+                fontFamily="monospace"
+              >
+                {fmtLb(p.item.weightLb!)}
               </text>
             )}
           </g>
         );
       })}
 
-      {/* length scale tick */}
       <line
         x1={PAD}
         y1={svgH - 12}
@@ -163,7 +261,7 @@ function TopDownView({ trailer, layout }: Props) {
         fontFamily="monospace"
       >
         {trailer.deckLength / 12}&apos; deck
-        {trailer.maxOverhang > 0 ? ` + ${trailer.maxOverhang / 12}' overhang` : ""}
+        {trailer.maxOverhang > 0 ? ` + ${trailer.maxOverhang / 12}' overhang zone` : ""}
       </text>
     </svg>
   );
@@ -175,7 +273,6 @@ const ISO_COS = Math.cos((30 * Math.PI) / 180);
 const ISO_SIN = Math.sin((30 * Math.PI) / 180);
 
 function project(x: number, y: number, z: number, s: number) {
-  // standard 30° isometric — x→right, y→back-right, z→up
   return {
     sx: (x - y) * ISO_COS * s,
     sy: (x + y) * ISO_SIN * s - z * s,
@@ -186,21 +283,15 @@ function IsoView({ trailer, layout }: Props) {
   const PAD = 20;
   const targetW = 460;
 
-  // base unit scale: fit deck length into available horizontal projection
   const totalLen = trailer.deckLength + trailer.maxOverhang;
-  // horizontal extent after iso = (totalLen + deckWidth) * ISO_COS
   const horizExt = (totalLen + trailer.deckWidth) * ISO_COS;
   const s = (targetW - PAD * 2) / horizExt;
-  // vertical extent: (totalLen + deckWidth) * ISO_SIN + maxHeight * s
   const vertExt =
     (totalLen + trailer.deckWidth) * ISO_SIN + trailer.maxHeight * s;
   const svgW = targetW;
   const svgH = vertExt + PAD * 2;
 
-  // offset so leftmost iso point is at PAD
-  // leftmost x in projection occurs at (x=0, y=deckWidth): sx = -deckWidth*ISO_COS*s
   const offsetX = PAD + trailer.deckWidth * ISO_COS * s;
-  // topmost y: at (x=0,y=0,z=maxHeight) sy = -maxHeight*s
   const offsetY = PAD + trailer.maxHeight * s;
 
   function P(x: number, y: number, z: number) {
@@ -208,7 +299,6 @@ function IsoView({ trailer, layout }: Props) {
     return { x: offsetX + p.sx, y: offsetY + p.sy };
   }
 
-  // Deck floor as a parallelogram
   const f0 = P(0, 0, 0);
   const f1 = P(trailer.deckLength, 0, 0);
   const f2 = P(trailer.deckLength, trailer.deckWidth, 0);
@@ -222,17 +312,12 @@ function IsoView({ trailer, layout }: Props) {
       ]
     : null;
 
-  // Sort placements back-to-front, left-to-right, bottom-to-top for painter's algorithm
-  // Painter order: smaller x+y first, then lower z first.
   const ordered = [...layout.placements].sort((a, b) => {
-    const aDepth = a.x + a.y;
-    const bDepth = b.x + b.y;
-    return aDepth - bDepth;
+    return (a.x + a.y) - (b.x + b.y);
   });
 
   return (
     <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full h-auto bg-secondary/40 border border-border">
-      {/* overhang first (behind) */}
       {overhangPath && (
         <polygon
           points={overhangPath.map((p) => `${p.x},${p.y}`).join(" ")}
@@ -242,7 +327,6 @@ function IsoView({ trailer, layout }: Props) {
           strokeWidth={1}
         />
       )}
-      {/* deck */}
       <polygon
         points={`${f0.x},${f0.y} ${f1.x},${f1.y} ${f2.x},${f2.y} ${f3.x},${f3.y}`}
         className="fill-card"
@@ -250,7 +334,6 @@ function IsoView({ trailer, layout }: Props) {
         strokeWidth={1}
       />
 
-      {/* cab block (small box hanging off front) */}
       <IsoBox
         x={-30}
         y={trailer.deckWidth * 0.15}
@@ -264,7 +347,6 @@ function IsoView({ trailer, layout }: Props) {
         side="#475569"
       />
 
-      {/* items */}
       {ordered.map((p, i) => {
         const c = COLORS[p.item.kind];
         return (
@@ -281,6 +363,7 @@ function IsoView({ trailer, layout }: Props) {
             front={c.front}
             side={c.side}
             stroke={p.item.oversize ? "#f59e0b" : "rgba(0,0,0,0.5)"}
+            label={p.posLabel}
           />
         );
       })}
@@ -289,36 +372,53 @@ function IsoView({ trailer, layout }: Props) {
 }
 
 function IsoBox({
-  x, y, z, l, w, h, P, top, front, side, stroke = "rgba(0,0,0,0.45)",
+  x, y, z, l, w, h, P, top, front, side, stroke = "rgba(0,0,0,0.45)", label,
 }: {
   x: number; y: number; z: number;
   l: number; w: number; h: number;
   P: (x: number, y: number, z: number) => { x: number; y: number };
   top: string; front: string; side: string;
   stroke?: string;
+  label?: string;
 }) {
-  // 8 corners
-  const A = P(x, y, z);           // back-left-bot
-  const B = P(x + l, y, z);       // back-right-bot
-  const C = P(x + l, y + w, z);   // front-right-bot
-  const D = P(x, y + w, z);       // front-left-bot
+  const A = P(x, y, z);
+  const B = P(x + l, y, z);
+  const C = P(x + l, y + w, z);
+  const D = P(x, y + w, z);
   const E = P(x, y, z + h);
   const F = P(x + l, y, z + h);
   const G = P(x + l, y + w, z + h);
   const H = P(x, y + w, z + h);
 
   const top4 = [E, F, G, H];
-  const front4 = [D, C, G, H]; // y+w face (front, toward viewer-right)
-  const side4 = [B, C, G, F];  // x+l face (right end of trailer)
+  const front4 = [D, C, G, H];
+  const side4 = [B, C, G, F];
 
   const pts = (arr: { x: number; y: number }[]) =>
     arr.map((p) => `${p.x},${p.y}`).join(" ");
+
+  // label centered on top face
+  const cx = (E.x + G.x) / 2;
+  const cy = (E.y + G.y) / 2;
 
   return (
     <g>
       <polygon points={pts(side4)} fill={side} stroke={stroke} strokeWidth={0.5} />
       <polygon points={pts(front4)} fill={front} stroke={stroke} strokeWidth={0.5} />
       <polygon points={pts(top4)} fill={top} stroke={stroke} strokeWidth={0.5} />
+      {label && (
+        <text
+          x={cx}
+          y={cy + 3}
+          fontSize={8}
+          textAnchor="middle"
+          fill="white"
+          fontFamily="monospace"
+          fontWeight={700}
+        >
+          {label}
+        </text>
+      )}
     </g>
   );
 }

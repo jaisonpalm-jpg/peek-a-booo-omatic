@@ -245,6 +245,7 @@ function buildDeckItems(
   boxes: BoxBreakdown,
   maxHeightIn: number,
   maxCurbStack: number,
+  extraGasketPallets = 0,
 ): DeckItem[] {
   const items: DeckItem[] = [];
 
@@ -252,6 +253,7 @@ function buildDeckItems(
   const stacks = stackCurbs(expandCurbs(pieces), maxHeightIn, maxCurbStack);
   for (const s of stacks) {
     const bottom = s.layers[0];
+    const wPer = bottom.piece.weight ?? 0;
     items.push({
       kind: "curb-stack",
       label: `Curb ×${s.count}`,
@@ -260,6 +262,7 @@ function buildDeckItems(
       heightIn: s.heightUsed,
       units: s.count,
       oversize: s.layers.some((l) => flagsForPiece(l.piece).length > 0),
+      weightLb: wPer > 0 ? wPer * s.count : undefined,
     });
   }
 
@@ -280,6 +283,7 @@ function buildDeckItems(
         heightIn: diameter * inBundle,
         units: inBundle,
         oversize: flagsForPiece(p).length > 0,
+        weightLb: p.weight ? p.weight * inBundle : undefined,
       });
       remaining -= inBundle;
     }
@@ -298,6 +302,7 @@ function buildDeckItems(
         heightIn: d.height,
         units: 1,
         oversize: flagsForPiece(p).length > 0,
+        weightLb: p.weight,
       });
     }
   }
@@ -317,11 +322,27 @@ function buildDeckItems(
     });
   }
 
-  // Gasket pallets
+  // Gasket pallets — required + any "extra" capacity pallets
+  const gasketWeightTotal = pieces
+    .filter(isNeopreneGasket)
+    .reduce((s, p) => s + (p.weight ?? 0) * p.qty, 0);
+  const wPerPallet =
+    boxes.gasketPallets > 0 ? gasketWeightTotal / boxes.gasketPallets : 0;
   for (let i = 0; i < boxes.gasketPallets; i++) {
     items.push({
       kind: "gasket-pallet",
       label: `Gasket pallet`,
+      lengthIn: PALLET_L,
+      widthIn: PALLET_W,
+      heightIn: GASKET_PALLET_HEIGHT_IN,
+      units: BOXES_PER_PALLET,
+      weightLb: wPerPallet > 0 ? wPerPallet : undefined,
+    });
+  }
+  for (let i = 0; i < extraGasketPallets; i++) {
+    items.push({
+      kind: "gasket-pallet",
+      label: `Extra gasket pallet`,
       lengthIn: PALLET_L,
       widthIn: PALLET_W,
       heightIn: GASKET_PALLET_HEIGHT_IN,
@@ -332,50 +353,90 @@ function buildDeckItems(
   return items;
 }
 
+/** Assigns row letters (front→back) and column indices (left→right). */
+function assignPosLabels(placements: DeckPlacement[]): void {
+  const byShelf = new Map<number, DeckPlacement[]>();
+  for (const p of placements) {
+    const key = Math.round(p.x);
+    const arr = byShelf.get(key) ?? [];
+    arr.push(p);
+    byShelf.set(key, arr);
+  }
+  const shelfXs = [...byShelf.keys()].sort((a, b) => a - b);
+  shelfXs.forEach((sx, rowIdx) => {
+    const row = byShelf.get(sx)!.sort((a, b) => a.y - b.y);
+    const letter = String.fromCharCode(65 + (rowIdx % 26));
+    row.forEach((p, colIdx) => {
+      p.posLabel = `${letter}${colIdx + 1}`;
+    });
+  });
+}
+
+type PackStrategy = "longest-first" | "shortest-first" | "widest-first";
+
 /**
- * Shelf-pack deck items onto a trailer. Items are sorted longest-first and
- * dropped into rows that span the deck width; each row advances along the
- * deck length axis. Items wider than the deck are rotated 90°. Rear overhang
- * past the deck length is permitted up to the trailer's maxOverhang.
+ * Shelf-pack deck items onto a trailer with selectable sort strategy.
  */
 function packDeckLayout(
   items: DeckItem[],
   trailer: TrailerSpec,
+  strategy: PackStrategy = "longest-first",
 ): DeckLayout {
   const placements: DeckPlacement[] = [];
   const deckW = trailer.deckWidth;
   const maxLen = trailer.deckLength + trailer.maxOverhang;
   const buffer = SEPARATION_IN;
 
-  // Sort: longest first, then widest.
-  const sorted = [...items].sort(
-    (a, b) => b.lengthIn - a.lengthIn || b.widthIn - a.widthIn,
-  );
+  const sorted = [...items].sort((a, b) => {
+    if (strategy === "shortest-first") {
+      return a.lengthIn - b.lengthIn || a.widthIn - b.widthIn;
+    }
+    if (strategy === "widest-first") {
+      return b.widthIn - a.widthIn || b.lengthIn - a.lengthIn;
+    }
+    return b.lengthIn - a.lengthIn || b.widthIn - a.widthIn;
+  });
 
   let cursorX = 0;
   let shelfY = 0;
   let shelfLen = 0;
   let allFit = true;
+  let unplaced = 0;
 
   for (const it of sorted) {
     let l = it.lengthIn;
     let w = it.widthIn;
-    // Rotate if it won't fit across deck width
+    // Rotate if needed: doesn't fit across width OR (min-overhang) rotation avoids overhang.
+    const wouldOverhang = cursorX + l > trailer.deckLength;
+    const rotatedFits =
+      it.widthIn <= deckW &&
+      it.lengthIn <= deckW &&
+      cursorX + it.widthIn <= trailer.deckLength;
     if (w > deckW && l <= deckW) {
+      [l, w] = [w, l];
+    } else if (
+      strategy === "shortest-first" &&
+      wouldOverhang &&
+      rotatedFits &&
+      it.widthIn <= it.lengthIn
+    ) {
       [l, w] = [w, l];
     }
     if (w > deckW || it.heightIn > trailer.maxHeight) {
       allFit = false;
+      unplaced++;
       continue;
     }
 
     // Try current shelf first
     if (shelfY + w + buffer <= deckW && cursorX + l <= maxLen) {
+      const overhangIn = Math.max(0, cursorX + l - trailer.deckLength);
       placements.push({
         item: { ...it, lengthIn: l, widthIn: w },
         x: cursorX,
         y: shelfY,
-        overhang: cursorX + l > trailer.deckLength,
+        overhang: overhangIn > 0,
+        overhangIn,
       });
       shelfY += w + buffer;
       shelfLen = Math.max(shelfLen, l);
@@ -388,24 +449,72 @@ function packDeckLayout(
     shelfLen = 0;
     if (cursorX + l > maxLen) {
       allFit = false;
+      unplaced++;
       continue;
     }
+    const overhangIn = Math.max(0, cursorX + l - trailer.deckLength);
     placements.push({
       item: { ...it, lengthIn: l, widthIn: w },
       x: cursorX,
       y: shelfY,
-      overhang: cursorX + l > trailer.deckLength,
+      overhang: overhangIn > 0,
+      overhangIn,
     });
     shelfY = w + buffer;
     shelfLen = l;
   }
 
+  assignPosLabels(placements);
+
   const usedLengthIn = placements.reduce(
     (m, p) => Math.max(m, p.x + p.item.lengthIn),
     0,
   );
-  return { placements, usedLengthIn, fits: allFit };
+  const totalOverhangIn = placements.reduce(
+    (s, p) => s + (p.overhangIn ?? 0),
+    0,
+  );
+  const weightLb = placements.reduce(
+    (s, p) => s + (p.item.weightLb ?? 0),
+    0,
+  );
+  return {
+    placements,
+    usedLengthIn,
+    fits: allFit,
+    totalOverhangIn,
+    placedCount: placements.length,
+    unplacedCount: unplaced,
+    weightLb,
+  };
 }
+
+/**
+ * Estimate how many extra gasket pallets could fit by repeatedly retrying
+ * the layout with N additional pallets until they no longer fit.
+ */
+function maxExtraGaskets(
+  baseItems: DeckItem[],
+  pieces: Piece[],
+  boxes: BoxBreakdown,
+  trailer: TrailerSpec,
+  maxHeightIn: number,
+  maxCurbStack: number,
+): { count: number; items: DeckItem[]; layout: DeckLayout } {
+  let lastGood = {
+    count: 0,
+    items: baseItems,
+    layout: packDeckLayout(baseItems, trailer),
+  };
+  for (let extra = 1; extra <= 24; extra++) {
+    const items = buildDeckItems(pieces, boxes, maxHeightIn, maxCurbStack, extra);
+    const layout = packDeckLayout(items, trailer);
+    if (!layout.fits) break;
+    lastGood = { count: extra, items, layout };
+  }
+  return lastGood;
+}
+
 
 
 /**
@@ -501,7 +610,38 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
       const needed = floorAreaIn2(validPieces, boxes, t.maxHeight, maxCurbStack);
       const curbStacks = stackCurbs(expandCurbs(validPieces), t.maxHeight, maxCurbStack);
       const itemsForTrailer = buildDeckItems(validPieces, boxes, t.maxHeight, maxCurbStack);
-      const layout = packDeckLayout(itemsForTrailer, t);
+      const layout = packDeckLayout(itemsForTrailer, t, "longest-first");
+
+      // Scenarios for open-deck trailers (where overhang/gasket trade-offs matter)
+      const isOpenDeck = (OPEN_DECK_IDS as readonly string[]).includes(t.id);
+      const scenarios: import("./types").PackingScenario[] = [];
+      if (isOpenDeck) {
+        scenarios.push({
+          id: "balanced",
+          name: "Balanced",
+          description: "Longest pieces first into shelf rows. Default packing.",
+          layout,
+          extraGasketPallets: 0,
+        });
+        const minOverhangLayout = packDeckLayout(itemsForTrailer, t, "shortest-first");
+        scenarios.push({
+          id: "min-overhang",
+          name: "Min Overhang",
+          description:
+            "Short pieces first; longer pieces rotate to stay on deck when possible.",
+          layout: minOverhangLayout,
+          extraGasketPallets: 0,
+        });
+        const maxG = maxExtraGaskets(itemsForTrailer, validPieces, boxes, t, t.maxHeight, maxCurbStack);
+        scenarios.push({
+          id: "max-gaskets",
+          name: "Max Gaskets",
+          description: `Fills free deck area with extra gasket pallets (+${maxG.count}).`,
+          layout: maxG.layout,
+          extraGasketPallets: maxG.count,
+        });
+      }
+
       // Required deck length = how far back the load reaches if spread across the deck width.
       const linearIn = needed / t.deckWidth;
       const fitsLength = longestLoose <= t.deckLength + t.maxOverhang && linearIn <= t.deckLength;
@@ -510,7 +650,7 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
       const fits = fitsLength && fitsWidth && fitsHeight && layout.fits;
       const utilizationPct = t.deckLength > 0 ? Math.min(100, (linearIn / t.deckLength) * 100) : 0;
       const deckAreaPct = deckArea > 0 ? Math.min(100, (needed / deckArea) * 100) : 0;
-      return { trailer: t, fits, linearFt: linearIn / 12, utilizationPct, deckAreaPct, neededIn2: needed, curbStacks, layout };
+      return { trailer: t, fits, linearFt: linearIn / 12, utilizationPct, deckAreaPct, neededIn2: needed, curbStacks, layout, scenarios };
     })
     .sort((a, b) => a.trailer.deckLength - b.trailer.deckLength);
 
@@ -634,6 +774,7 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
       linearFt: c.linearFt,
       curbStacks: toCurbStackViews(c.curbStacks),
       layout: c.layout,
+      scenarios: c.scenarios,
     })),
     alternates: candidates
       .filter((c) => c.fits && c.trailer.id !== best?.trailer.id)

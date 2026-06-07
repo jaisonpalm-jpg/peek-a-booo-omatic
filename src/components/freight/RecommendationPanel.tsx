@@ -355,11 +355,13 @@ function OpenDeckCandidates({ candidates, pickId }: { candidates: Recommendation
       </div>
       <div className="space-y-3 pt-2">
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-          Load Layout Per Trailer (2D + 3D)
+          Load Layout Per Trailer — Compare Packing Scenarios
         </p>
         <p className="text-xs text-muted-foreground">
-          Top-down packing and isometric load view. Cab block sits at the
-          front of the deck; amber hatched zone shows the legal rear overhang.
+          Switch between scenarios to compare trade-offs: <strong>Balanced</strong> is the
+          default shelf pack; <strong>Min Overhang</strong> rotates and reorders to keep
+          freight on-deck; <strong>Max Gaskets</strong> fills leftover deck area with extra
+          gasket pallets.
         </p>
         <div className="divide-y-2 divide-rule">
           {list.map((c) => {
@@ -375,7 +377,7 @@ function OpenDeckCandidates({ candidates, pickId }: { candidates: Recommendation
                     )}
                   </span>
                 </div>
-                <TrailerLoadDiagram trailer={c.trailer} layout={c.layout} />
+                <ScenarioComparison candidate={c} />
                 {c.curbStacks.length > 0 && (
                   <div className="pt-2">
                     <CurbStackDiagram stacks={c.curbStacks} maxHeightIn={c.trailer.maxHeight} />
@@ -387,6 +389,69 @@ function OpenDeckCandidates({ candidates, pickId }: { candidates: Recommendation
         </div>
       </div>
 
+    </div>
+  );
+}
+
+function ScenarioComparison({ candidate }: { candidate: Recommendation["candidates"][number] }) {
+  const scenarios = candidate.scenarios.length > 0
+    ? candidate.scenarios
+    : [{ id: "balanced" as const, name: "Balanced", description: "", layout: candidate.layout, extraGasketPallets: 0 }];
+  const [active, setActive] = useState<string>(scenarios[0].id);
+  const current = scenarios.find((s) => s.id === active) ?? scenarios[0];
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-3 gap-px bg-border border border-rule">
+        {scenarios.map((s) => {
+          const isActive = s.id === active;
+          const overhangFt = s.layout.totalOverhangIn / 12;
+          return (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => setActive(s.id)}
+              className={`p-2.5 text-left transition-colors ${
+                isActive ? "bg-card ring-2 ring-rule ring-inset" : "bg-secondary hover:bg-card"
+              }`}
+            >
+              <p className="text-[10px] font-bold uppercase tracking-widest">
+                {s.name}
+              </p>
+              <div className="mt-1 font-mono text-[10px] text-muted-foreground space-y-0.5">
+                <div>
+                  Items <span className="text-foreground font-bold">{s.layout.placedCount}</span>
+                  {s.layout.unplacedCount > 0 && (
+                    <span className="text-warning"> (+{s.layout.unplacedCount} unplaced)</span>
+                  )}
+                </div>
+                <div>
+                  Overhang{" "}
+                  <span className={overhangFt > 0 ? "text-warning font-bold" : "text-foreground font-bold"}>
+                    {overhangFt.toFixed(1)}&apos;
+                  </span>
+                </div>
+                {s.extraGasketPallets > 0 && (
+                  <div>
+                    Extra pallets{" "}
+                    <span className="text-success font-bold">+{s.extraGasketPallets}</span>
+                  </div>
+                )}
+                {s.layout.weightLb > 0 && (
+                  <div>
+                    Weight{" "}
+                    <span className="text-foreground font-bold">
+                      {Math.round(s.layout.weightLb).toLocaleString()} lb
+                    </span>
+                  </div>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-[11px] text-muted-foreground italic">{current.description}</p>
+      <TrailerLoadDiagram trailer={candidate.trailer} layout={current.layout} />
     </div>
   );
 }
