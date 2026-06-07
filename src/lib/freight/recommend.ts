@@ -236,6 +236,178 @@ function toCurbStackViews(stacks: CurbStack[]): CurbStackView[] {
   }));
 }
 
+/** Pallet stack height: 4 boxes × 24" + ~5" pallet deck = 101". */
+const GASKET_PALLET_HEIGHT_IN = BOXES_PER_PALLET * BOX_H + 5;
+
+/** Build a flat list of physical items to load on the deck. */
+function buildDeckItems(
+  pieces: Piece[],
+  boxes: BoxBreakdown,
+  maxHeightIn: number,
+  maxCurbStack: number,
+): DeckItem[] {
+  const items: DeckItem[] = [];
+
+  // Curb stacks
+  const stacks = stackCurbs(expandCurbs(pieces), maxHeightIn, maxCurbStack);
+  for (const s of stacks) {
+    const bottom = s.layers[0];
+    items.push({
+      kind: "curb-stack",
+      label: `Curb ×${s.count}`,
+      lengthIn: bottom.length,
+      widthIn: bottom.width,
+      heightIn: s.heightUsed,
+      units: s.count,
+      oversize: s.layers.some((l) => flagsForPiece(l.piece).length > 0),
+    });
+  }
+
+  // Loose pipe bundles
+  for (const p of pieces) {
+    if (isBoxable(p) || isRoofCurb(p) || !isPipe(p)) continue;
+    const d = effectiveDims(p);
+    const diameter = Math.max(d.width, d.height);
+    const stack = pipeStackCount(diameter);
+    let remaining = p.qty;
+    while (remaining > 0) {
+      const inBundle = Math.min(stack, remaining);
+      items.push({
+        kind: "pipe-bundle",
+        label: `${p.description} ×${inBundle}`,
+        lengthIn: d.length,
+        widthIn: d.width,
+        heightIn: diameter * inBundle,
+        units: inBundle,
+        oversize: flagsForPiece(p).length > 0,
+      });
+      remaining -= inBundle;
+    }
+  }
+
+  // Other loose (non-pipe, non-curb, non-boxable) pieces — rare but supported
+  for (const p of pieces) {
+    if (isBoxable(p) || isRoofCurb(p) || isPipe(p)) continue;
+    const d = effectiveDims(p);
+    for (let i = 0; i < p.qty; i++) {
+      items.push({
+        kind: "pipe-bundle",
+        label: p.description,
+        lengthIn: d.length,
+        widthIn: d.width,
+        heightIn: d.height,
+        units: 1,
+        oversize: flagsForPiece(p).length > 0,
+      });
+    }
+  }
+
+  // Filler boxes — 2 high
+  const fillerStacks = Math.ceil(boxes.fillerBoxes / BOX_STACK);
+  for (let i = 0; i < fillerStacks; i++) {
+    const remaining = boxes.fillerBoxes - i * BOX_STACK;
+    const inStack = Math.min(BOX_STACK, remaining);
+    items.push({
+      kind: "box-stack",
+      label: `Boxes ×${inStack}`,
+      lengthIn: BOX_L,
+      widthIn: BOX_W,
+      heightIn: BOX_H * inStack,
+      units: inStack,
+    });
+  }
+
+  // Gasket pallets
+  for (let i = 0; i < boxes.gasketPallets; i++) {
+    items.push({
+      kind: "gasket-pallet",
+      label: `Gasket pallet`,
+      lengthIn: PALLET_L,
+      widthIn: PALLET_W,
+      heightIn: GASKET_PALLET_HEIGHT_IN,
+      units: BOXES_PER_PALLET,
+    });
+  }
+
+  return items;
+}
+
+/**
+ * Shelf-pack deck items onto a trailer. Items are sorted longest-first and
+ * dropped into rows that span the deck width; each row advances along the
+ * deck length axis. Items wider than the deck are rotated 90°. Rear overhang
+ * past the deck length is permitted up to the trailer's maxOverhang.
+ */
+function packDeckLayout(
+  items: DeckItem[],
+  trailer: TrailerSpec,
+): DeckLayout {
+  const placements: DeckPlacement[] = [];
+  const deckW = trailer.deckWidth;
+  const maxLen = trailer.deckLength + trailer.maxOverhang;
+  const buffer = SEPARATION_IN;
+
+  // Sort: longest first, then widest.
+  const sorted = [...items].sort(
+    (a, b) => b.lengthIn - a.lengthIn || b.widthIn - a.widthIn,
+  );
+
+  let cursorX = 0;
+  let shelfY = 0;
+  let shelfLen = 0;
+  let allFit = true;
+
+  for (const it of sorted) {
+    let l = it.lengthIn;
+    let w = it.widthIn;
+    // Rotate if it won't fit across deck width
+    if (w > deckW && l <= deckW) {
+      [l, w] = [w, l];
+    }
+    if (w > deckW || it.heightIn > trailer.maxHeight) {
+      allFit = false;
+      continue;
+    }
+
+    // Try current shelf first
+    if (shelfY + w + buffer <= deckW && cursorX + l <= maxLen) {
+      placements.push({
+        item: { ...it, lengthIn: l, widthIn: w },
+        x: cursorX,
+        y: shelfY,
+        overhang: cursorX + l > trailer.deckLength,
+      });
+      shelfY += w + buffer;
+      shelfLen = Math.max(shelfLen, l);
+      continue;
+    }
+
+    // New shelf
+    cursorX += shelfLen + buffer;
+    shelfY = 0;
+    shelfLen = 0;
+    if (cursorX + l > maxLen) {
+      allFit = false;
+      continue;
+    }
+    placements.push({
+      item: { ...it, lengthIn: l, widthIn: w },
+      x: cursorX,
+      y: shelfY,
+      overhang: cursorX + l > trailer.deckLength,
+    });
+    shelfY = w + buffer;
+    shelfLen = l;
+  }
+
+  const usedLengthIn = placements.reduce(
+    (m, p) => Math.max(m, p.x + p.item.lengthIn),
+    0,
+  );
+  return { placements, usedLengthIn, fits: allFit };
+}
+
+
 /**
  * Floor area in square inches needed on the trailer deck,
  * accounting for stacking pipes, curbs, and boxes.
