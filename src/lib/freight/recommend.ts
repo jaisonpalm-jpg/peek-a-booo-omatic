@@ -500,17 +500,20 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
       const deckArea = t.deckLength * t.deckWidth;
       const needed = floorAreaIn2(validPieces, boxes, t.maxHeight, maxCurbStack);
       const curbStacks = stackCurbs(expandCurbs(validPieces), t.maxHeight, maxCurbStack);
+      const itemsForTrailer = buildDeckItems(validPieces, boxes, t.maxHeight, maxCurbStack);
+      const layout = packDeckLayout(itemsForTrailer, t);
       // Required deck length = how far back the load reaches if spread across the deck width.
       const linearIn = needed / t.deckWidth;
       const fitsLength = longestLoose <= t.deckLength + t.maxOverhang && linearIn <= t.deckLength;
       const fitsWidth = widestIn <= t.deckWidth;
       const fitsHeight = tallestIn <= t.maxHeight;
-      const fits = fitsLength && fitsWidth && fitsHeight;
+      const fits = fitsLength && fitsWidth && fitsHeight && layout.fits;
       const utilizationPct = t.deckLength > 0 ? Math.min(100, (linearIn / t.deckLength) * 100) : 0;
       const deckAreaPct = deckArea > 0 ? Math.min(100, (needed / deckArea) * 100) : 0;
-      return { trailer: t, fits, linearFt: linearIn / 12, utilizationPct, deckAreaPct, neededIn2: needed, curbStacks };
+      return { trailer: t, fits, linearFt: linearIn / 12, utilizationPct, deckAreaPct, neededIn2: needed, curbStacks, layout };
     })
     .sort((a, b) => a.trailer.deckLength - b.trailer.deckLength);
+
 
   const insulated = validPieces.some((p) => p.insulated);
   const totalWeightLb = validPieces.reduce((s, p) => s + (p.weight ?? 0) * p.qty, 0);
