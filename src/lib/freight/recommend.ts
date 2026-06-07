@@ -610,7 +610,38 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
       const needed = floorAreaIn2(validPieces, boxes, t.maxHeight, maxCurbStack);
       const curbStacks = stackCurbs(expandCurbs(validPieces), t.maxHeight, maxCurbStack);
       const itemsForTrailer = buildDeckItems(validPieces, boxes, t.maxHeight, maxCurbStack);
-      const layout = packDeckLayout(itemsForTrailer, t);
+      const layout = packDeckLayout(itemsForTrailer, t, "longest-first");
+
+      // Scenarios for open-deck trailers (where overhang/gasket trade-offs matter)
+      const isOpenDeck = (OPEN_DECK_IDS as readonly string[]).includes(t.id);
+      const scenarios: import("./types").PackingScenario[] = [];
+      if (isOpenDeck) {
+        scenarios.push({
+          id: "balanced",
+          name: "Balanced",
+          description: "Longest pieces first into shelf rows. Default packing.",
+          layout,
+          extraGasketPallets: 0,
+        });
+        const minOverhangLayout = packDeckLayout(itemsForTrailer, t, "shortest-first");
+        scenarios.push({
+          id: "min-overhang",
+          name: "Min Overhang",
+          description:
+            "Short pieces first; longer pieces rotate to stay on deck when possible.",
+          layout: minOverhangLayout,
+          extraGasketPallets: 0,
+        });
+        const maxG = maxExtraGaskets(itemsForTrailer, validPieces, boxes, t, t.maxHeight, maxCurbStack);
+        scenarios.push({
+          id: "max-gaskets",
+          name: "Max Gaskets",
+          description: `Fills free deck area with extra gasket pallets (+${maxG.count}).`,
+          layout: maxG.layout,
+          extraGasketPallets: maxG.count,
+        });
+      }
+
       // Required deck length = how far back the load reaches if spread across the deck width.
       const linearIn = needed / t.deckWidth;
       const fitsLength = longestLoose <= t.deckLength + t.maxOverhang && linearIn <= t.deckLength;
@@ -619,7 +650,7 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
       const fits = fitsLength && fitsWidth && fitsHeight && layout.fits;
       const utilizationPct = t.deckLength > 0 ? Math.min(100, (linearIn / t.deckLength) * 100) : 0;
       const deckAreaPct = deckArea > 0 ? Math.min(100, (needed / deckArea) * 100) : 0;
-      return { trailer: t, fits, linearFt: linearIn / 12, utilizationPct, deckAreaPct, neededIn2: needed, curbStacks, layout };
+      return { trailer: t, fits, linearFt: linearIn / 12, utilizationPct, deckAreaPct, neededIn2: needed, curbStacks, layout, scenarios };
     })
     .sort((a, b) => a.trailer.deckLength - b.trailer.deckLength);
 
