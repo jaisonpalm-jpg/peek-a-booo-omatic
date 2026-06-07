@@ -93,6 +93,8 @@ export interface DeckItem {
   /** Number of constituent units (pipes in bundle, boxes in stack, layers). */
   units: number;
   oversize?: boolean;
+  /** Total weight in pounds for this physical block (optional). */
+  weightLb?: number;
 }
 
 export interface DeckPlacement {
@@ -102,6 +104,10 @@ export interface DeckPlacement {
   y: number;
   /** True if this item extends past the deck length as legal rear overhang. */
   overhang?: boolean;
+  /** Inches of this item past the deck length (0 if none). */
+  overhangIn?: number;
+  /** Grid-style position label (e.g. "A1") computed by the packer. */
+  posLabel?: string;
 }
 
 export interface DeckLayout {
@@ -110,6 +116,25 @@ export interface DeckLayout {
   usedLengthIn: number;
   /** Whether the layout managed to place every item. */
   fits: boolean;
+  /** Total inches past the deck length across all placements. */
+  totalOverhangIn: number;
+  /** Number of placed items. */
+  placedCount: number;
+  /** Number of items that could not be placed. */
+  unplacedCount: number;
+  /** Total weight in lb of all placed items (0 when unknown). */
+  weightLb: number;
+}
+
+export type PackingStrategyId = "balanced" | "min-overhang" | "max-gaskets";
+
+export interface PackingScenario {
+  id: PackingStrategyId;
+  name: string;
+  description: string;
+  layout: DeckLayout;
+  /** Extra gasket pallets added beyond the required load (max-gaskets strategy). */
+  extraGasketPallets: number;
 }
 
 export interface CandidateBreakdown {
@@ -120,8 +145,10 @@ export interface CandidateBreakdown {
   linearFt: number;
   /** Per-trailer curb stack layout (max-height dependent). */
   curbStacks: CurbStackView[];
-  /** Packed 2D/3D layout of every load item on the deck. */
+  /** Default packed 2D/3D layout of every load item on the deck. */
   layout: DeckLayout;
+  /** Multiple packing scenarios for side-by-side comparison. */
+  scenarios: PackingScenario[];
 }
 
 export interface Recommendation {
