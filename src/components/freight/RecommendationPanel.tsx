@@ -2,6 +2,7 @@ import { useState } from "react";
 import { AlertTriangle, CheckCircle2, Truck } from "lucide-react";
 import type { Recommendation } from "@/lib/freight/types";
 import { CurbStackDiagram } from "./CurbStackDiagram";
+import { TrailerLoadDiagram } from "./TrailerLoadDiagram";
 
 interface RecommendationPanelProps {
   rec: Recommendation;
@@ -352,38 +353,40 @@ function OpenDeckCandidates({ candidates, pickId }: { candidates: Recommendation
           );
         })}
       </div>
-      {list.some((c) => c.curbStacks.length > 0) && (
-        <div className="space-y-3 pt-2">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Curb Stacking Per Trailer
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Height-limited stacking — taller decks fit more layers. 4&quot; strap buffer
-            shown dashed around each base; 2&quot; dunnage gap between layers.
-          </p>
-          <div className="divide-y-2 divide-rule">
-            {list
-              .filter((c) => c.curbStacks.length > 0)
-              .map((c) => {
-                const isPick = pickId === c.trailer.id;
-                return (
-                  <div key={c.trailer.id} className="py-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-bold">{c.trailer.name}</p>
-                      <span className="text-[10px] font-mono text-muted-foreground uppercase">
-                        max {(c.trailer.maxHeight / 12).toFixed(1)}&apos; tall
-                        {isPick && (
-                          <span className="ml-2 text-success font-bold">· pick</span>
-                        )}
-                      </span>
-                    </div>
+      <div className="space-y-3 pt-2">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          Load Layout Per Trailer (2D + 3D)
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Top-down packing and isometric load view. Cab block sits at the
+          front of the deck; amber hatched zone shows the legal rear overhang.
+        </p>
+        <div className="divide-y-2 divide-rule">
+          {list.map((c) => {
+            const isPick = pickId === c.trailer.id;
+            return (
+              <div key={c.trailer.id} className="py-4 space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-1">
+                  <p className="text-sm font-bold">{c.trailer.name}</p>
+                  <span className="text-[10px] font-mono text-muted-foreground uppercase">
+                    max {(c.trailer.maxHeight / 12).toFixed(1)}&apos; tall
+                    {isPick && (
+                      <span className="ml-2 text-success font-bold">· pick</span>
+                    )}
+                  </span>
+                </div>
+                <TrailerLoadDiagram trailer={c.trailer} layout={c.layout} />
+                {c.curbStacks.length > 0 && (
+                  <div className="pt-2">
                     <CurbStackDiagram stacks={c.curbStacks} maxHeightIn={c.trailer.maxHeight} />
                   </div>
-                );
-              })}
-          </div>
+                )}
+              </div>
+            );
+          })}
         </div>
-      )}
+      </div>
+
     </div>
   );
 }

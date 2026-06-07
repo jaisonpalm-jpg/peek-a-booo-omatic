@@ -77,6 +77,41 @@ export interface CurbStackView {
   separationIn: number;
 }
 
+export type DeckItemKind =
+  | "curb-stack"
+  | "pipe-bundle"
+  | "box-stack"
+  | "gasket-pallet";
+
+export interface DeckItem {
+  kind: DeckItemKind;
+  label: string;
+  /** Footprint length / width / vertical height in INCHES. */
+  lengthIn: number;
+  widthIn: number;
+  heightIn: number;
+  /** Number of constituent units (pipes in bundle, boxes in stack, layers). */
+  units: number;
+  oversize?: boolean;
+}
+
+export interface DeckPlacement {
+  item: DeckItem;
+  /** Position in INCHES from front-left of the deck (x=length axis, y=width axis). */
+  x: number;
+  y: number;
+  /** True if this item extends past the deck length as legal rear overhang. */
+  overhang?: boolean;
+}
+
+export interface DeckLayout {
+  placements: DeckPlacement[];
+  /** Furthest extent in the length axis (inches), incl. overhang. */
+  usedLengthIn: number;
+  /** Whether the layout managed to place every item. */
+  fits: boolean;
+}
+
 export interface CandidateBreakdown {
   trailer: TrailerSpec;
   fits: boolean;
@@ -85,6 +120,8 @@ export interface CandidateBreakdown {
   linearFt: number;
   /** Per-trailer curb stack layout (max-height dependent). */
   curbStacks: CurbStackView[];
+  /** Packed 2D/3D layout of every load item on the deck. */
+  layout: DeckLayout;
 }
 
 export interface Recommendation {
