@@ -775,7 +775,6 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
       curbStacks: toCurbStackViews(c.curbStacks),
       layout: c.layout,
       scenarios: c.scenarios,
-      layout: c.layout,
     })),
     alternates: candidates
       .filter((c) => c.fits && c.trailer.id !== best?.trailer.id)
