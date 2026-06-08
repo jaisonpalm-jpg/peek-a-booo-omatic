@@ -107,7 +107,7 @@ function EstimatorPage() {
     <div className="min-h-screen bg-background text-foreground">
       <div className="lg:pl-64">
         <header className="border-b-2 border-rule bg-card sticky top-0 z-10">
-          <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 xl:px-10 py-3 sm:py-4 flex items-center justify-between gap-3">
+          <div className="max-w-screen-2xl mx-auto lg:mx-0 px-4 sm:px-6 xl:px-10 py-3 sm:py-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <JobsSidebar
                 jobs={jobs}
@@ -168,7 +168,7 @@ function EstimatorPage() {
 
           {shareUrl && (
             <div className="border-t border-rule bg-secondary">
-              <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 xl:px-10 py-2 flex items-center gap-3 text-xs">
+              <div className="max-w-screen-2xl mx-auto lg:mx-0 px-4 sm:px-6 xl:px-10 py-2 flex items-center gap-3 text-xs">
                 <Link2 className="size-3.5 shrink-0" />
                 <span className="font-bold uppercase tracking-widest text-[10px]">
                   {copied ? "Copied" : "Share link"}
@@ -186,7 +186,7 @@ function EstimatorPage() {
           )}
         </header>
 
-        <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 xl:px-10 py-6 sm:py-8">
+        <main className="max-w-screen-2xl mx-auto lg:mx-0 px-4 sm:px-6 xl:px-10 py-6 sm:py-8">
           {!activeJob ? (
             <div className="py-24 text-center">
               <p className="text-sm text-muted-foreground mb-4">No job selected.</p>
@@ -254,7 +254,7 @@ function EstimatorPage() {
           )}
         </main>
 
-        <footer className="max-w-screen-2xl mx-auto px-4 sm:px-6 xl:px-10 py-8 border-t border-border mt-12 text-xs text-muted-foreground">
+        <footer className="max-w-screen-2xl mx-auto lg:mx-0 px-4 sm:px-6 xl:px-10 py-8 border-t border-border mt-12 text-xs text-muted-foreground">
           Federal limits: 8&apos;6&quot; width · 13&apos;6&quot; height · 53&apos; length · 4&apos; rear overhang.
           State permits may vary.
         </footer>
