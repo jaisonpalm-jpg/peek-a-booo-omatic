@@ -173,41 +173,44 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
         )}
       </div>
 
-      <div className="bg-card ring-2 ring-rule">
-        <div className={`flex border-b-2 border-rule ${!hasEnclosed ? "hidden" : ""}`}>
-          <button
-            type="button"
-            onClick={() => setTab("enclosed")}
-            className={`flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-widest transition-colors ${
-              tab === "enclosed"
-                ? "bg-card text-foreground border-b-0"
-                : "bg-secondary text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Box Trucks & Dry Van
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("open")}
-            className={`flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-widest transition-colors ${
-              tab === "open"
-                ? "bg-card text-foreground border-b-0"
-                : "bg-secondary text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Flatbed / Conestoga / Hotshot
-          </button>
-        </div>
+      {!isSplit && fitCandidates.length > 0 && (
+        <div className="bg-card ring-2 ring-rule">
+          <div className={`flex border-b-2 border-rule ${!hasEnclosedFit ? "hidden" : ""}`}>
+            <button
+              type="button"
+              onClick={() => setTab("enclosed")}
+              className={`flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                tab === "enclosed"
+                  ? "bg-card text-foreground border-b-0"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Box Trucks & Dry Van
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("open")}
+              className={`flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                tab === "open"
+                  ? "bg-card text-foreground border-b-0"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Flatbed / Conestoga / Hotshot
+            </button>
+          </div>
 
-        <div className="p-4">
-          {tab === "enclosed" && (
-            <EnclosedCandidates candidates={candidates} pickId={trailer?.id} />
-          )}
-          {tab === "open" && (
-            <OpenDeckCandidates candidates={candidates} pickId={trailer?.id} />
-          )}
+          <div className="p-4">
+            {tab === "enclosed" && (
+              <EnclosedCandidates candidates={fitCandidates} pickId={trailer?.id} />
+            )}
+            {tab === "open" && (
+              <OpenDeckCandidates candidates={fitCandidates} pickId={trailer?.id} />
+            )}
+          </div>
         </div>
-      </div>
+      )}
+
 
       {rec.splitShipment && (
         <div className="bg-card ring-2 ring-warning/60 overflow-hidden">
