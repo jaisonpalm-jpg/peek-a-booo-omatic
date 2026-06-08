@@ -204,27 +204,30 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
               {rec.splitShipment.reason}
             </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-border">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-px bg-border">
             {rec.splitShipment.trucks.map((tr, i) => (
-              <div key={i} className="bg-card p-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  Truck {i + 1}
-                </p>
-                <div className="flex items-center gap-2 mt-1">
-                  <Truck className="size-5 text-foreground" />
-                  <p className="text-lg font-semibold">{tr.trailer.name}</p>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">{tr.trailer.description}</p>
-                <div className="mt-3 space-y-1 font-mono text-[11px]">
-                  <div>
-                    Carries <span className="font-bold text-foreground">{tr.summary}</span>
+              <div key={i} className="bg-card p-4 space-y-3">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Truck {i + 1}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Truck className="size-5 text-foreground" />
+                    <p className="text-lg font-semibold">{tr.trailer.name}</p>
                   </div>
-                  <div>
-                    Deck used{" "}
-                    <span className="font-bold text-foreground">{tr.linearFt.toFixed(1)} ft</span> ·{" "}
-                    {Math.round(tr.deckAreaPct)}% area
+                  <p className="text-xs text-muted-foreground mt-1">{tr.trailer.description}</p>
+                  <div className="mt-3 space-y-1 font-mono text-[11px]">
+                    <div>
+                      Carries <span className="font-bold text-foreground">{tr.summary}</span>
+                    </div>
+                    <div>
+                      Deck used{" "}
+                      <span className="font-bold text-foreground">{tr.linearFt.toFixed(1)} ft</span> ·{" "}
+                      {Math.round(tr.deckAreaPct)}% area
+                    </div>
                   </div>
                 </div>
+                <TrailerLoadDiagram trailer={tr.trailer} layout={tr.layout} />
               </div>
             ))}
           </div>
