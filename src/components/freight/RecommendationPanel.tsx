@@ -419,7 +419,7 @@ function OpenDeckCandidates({ candidates, pickId }: { candidates: Recommendation
       </div>
       <div className="space-y-3 pt-2">
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-          Load Layout Per Trailer — Compare Packing Scenarios
+          Recommended Load Layout — Compare Packing Scenarios
         </p>
         <p className="text-xs text-muted-foreground">
           Switch between scenarios to compare trade-offs: <strong>Balanced</strong> is the
@@ -428,8 +428,9 @@ function OpenDeckCandidates({ candidates, pickId }: { candidates: Recommendation
           gasket pallets.
         </p>
         <div className="divide-y-2 divide-rule">
-          {list.map((c) => {
-            const isPick = pickId === c.trailer.id;
+          {list.filter((c) => c.trailer.id === pickId).map((c) => {
+            const isPick = true;
+
             return (
               <div key={c.trailer.id} className="py-4 space-y-3">
                 <div className="flex items-center justify-between flex-wrap gap-1">
