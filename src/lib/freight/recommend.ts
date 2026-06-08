@@ -654,7 +654,10 @@ function splitTwoTrucks(
       const layout = packDeckLayout(items, primary, "longest-first");
       const needed = floorAreaIn2(trial, subBoxes, primary.maxHeight, maxCurbStack);
       const linearIn = needed / primary.deckWidth;
-      const widest = trial.reduce((m, q) => Math.max(m, effectiveDims(q).width), 0);
+      const widest = trial.reduce(
+        (m, q) => (isRoofCurb(q) ? m : Math.max(m, effectiveDims(q).width)),
+        0,
+      );
       const tallest = trial.reduce((m, q) => Math.max(m, effectiveDims(q).height), 0);
       const fits =
         layout.fits &&
