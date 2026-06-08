@@ -766,7 +766,13 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
       // Required deck length = how far back the load reaches if spread across the deck width.
       const linearIn = needed / t.deckWidth;
       const fitsLength = longestLoose <= t.deckLength + t.maxOverhang && linearIn <= t.deckLength;
-      const fitsWidth = widestIn <= t.deckWidth;
+      // Wide curb adapters are allowed as permitted oversize loads; only
+      // non-curb pieces need to fit within the legal deck width here.
+      const widestNonCurbIn = validPieces.reduce(
+        (m, p) => (isRoofCurb(p) ? m : Math.max(m, effectiveDims(p).width)),
+        0,
+      );
+      const fitsWidth = widestNonCurbIn <= t.deckWidth;
       const fitsHeight = tallestIn <= t.maxHeight;
       const fits = fitsLength && fitsWidth && fitsHeight && layout.fits;
       const utilizationPct = t.deckLength > 0 ? Math.min(100, (linearIn / t.deckLength) * 100) : 0;
