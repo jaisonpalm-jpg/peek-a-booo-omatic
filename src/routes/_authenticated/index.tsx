@@ -252,7 +252,8 @@ function EstimatorPage() {
                   </p>
                 </div>
                 <RecommendationPanel rec={rec} />
-              </aside>
+              </section>
+
             </div>
           )}
         </main>
