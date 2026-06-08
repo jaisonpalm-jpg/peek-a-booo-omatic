@@ -225,7 +225,7 @@ function EstimatorPage() {
                 <PieceTable pieces={pieces} onChange={setPieces} />
               </section>
 
-              <aside className="lg:col-span-5 lg:sticky lg:top-24 lg:self-start space-y-6">
+              <aside className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-24 lg:self-start space-y-6">
                 <div className="bg-card ring-2 ring-rule p-4 space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <label htmlFor="curb-stack" className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
