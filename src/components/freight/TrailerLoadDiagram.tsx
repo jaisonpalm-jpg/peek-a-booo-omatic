@@ -192,6 +192,8 @@ function TopDownView({ trailer, layout }: Props) {
         const showPos = w > 18 && h > 10;
         const showDims = w > 64 && h > 22;
         const showWeight = !!p.item.weightLb && w > 80 && h > 32;
+        const layers = p.item.units > 1 ? p.item.units : 0;
+        const insetMax = Math.min(w, h) * 0.18;
         return (
           <g key={i}>
             <rect
@@ -203,6 +205,24 @@ function TopDownView({ trailer, layout }: Props) {
               stroke={p.item.oversize ? "#f59e0b" : "rgba(0,0,0,0.4)"}
               strokeWidth={p.item.oversize ? 1.5 : 0.75}
             />
+            {/* Nested inset rectangles communicate stack depth from top-down. */}
+            {layers > 1 &&
+              Array.from({ length: Math.min(layers - 1, 3) }).map((_, k) => {
+                const inset = ((k + 1) / Math.min(layers, 4)) * insetMax;
+                return (
+                  <rect
+                    key={`ly-${k}`}
+                    x={x + inset}
+                    y={y + inset}
+                    width={Math.max(0, w - inset * 2)}
+                    height={Math.max(0, h - inset * 2)}
+                    fill="none"
+                    stroke="rgba(255,255,255,0.55)"
+                    strokeWidth={0.6}
+                    strokeDasharray="2 2"
+                  />
+                );
+              })}
             {showPos && (
               <text
                 x={x + 3}
@@ -214,6 +234,7 @@ function TopDownView({ trailer, layout }: Props) {
                 fontWeight={700}
               >
                 {p.posLabel}
+                {layers > 1 ? ` ×${layers}` : ""}
               </text>
             )}
             {showDims && (
