@@ -62,7 +62,7 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack 
   }, [validPieces]);
 
   const evalResult = useMemo(
-    () => evaluateManualSplit(validPieces, configs, { maxCurbStack }),
+    () => evaluateManualSplit(validPieces, configs, { maxCurbStack, smartStack }),
     [validPieces, configs, maxCurbStack],
   );
 
@@ -112,7 +112,7 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack 
           const trial = next.map((c, j) =>
             j === i ? { ...c, pieceIds: [...c.pieceIds, p.id] } : c,
           );
-          const ev = evaluateManualSplit(validPieces, trial, { maxCurbStack });
+          const ev = evaluateManualSplit(validPieces, trial, { maxCurbStack, smartStack });
           const t = ev.trucks[i];
           if (t.fits && t.deckAreaPct < bestPct) {
             bestPct = t.deckAreaPct;
@@ -123,7 +123,7 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack 
           // Fall back: assign to least-loaded truck even if overflow.
           let minPct = Number.POSITIVE_INFINITY;
           for (let i = 0; i < next.length; i++) {
-            const ev = evaluateManualSplit(validPieces, next, { maxCurbStack });
+            const ev = evaluateManualSplit(validPieces, next, { maxCurbStack, smartStack });
             if (ev.trucks[i].deckAreaPct < minPct) {
               minPct = ev.trucks[i].deckAreaPct;
               bestIdx = i;
