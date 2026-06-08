@@ -8,6 +8,7 @@ import type {
   OversizeFlag,
   Piece,
   Recommendation,
+  TrailerId,
   TrailerSpec,
 } from "./types";
 
