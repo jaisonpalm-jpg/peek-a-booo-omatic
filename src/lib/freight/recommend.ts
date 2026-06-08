@@ -655,7 +655,7 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
     longestIn,
     widestIn,
     tallestIn,
-    boxes: boxes.total,
+    boxes: boxes.fillerBoxes,
     gasketPallets: boxes.gasketPallets,
     weightLb: totalWeightLb,
     insulated,
