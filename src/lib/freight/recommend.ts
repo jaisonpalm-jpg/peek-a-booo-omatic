@@ -324,10 +324,9 @@ function buildDeckItems(
   }
 
   // Gasket pallets are an ACCESSORY — they ship alongside but do not drive
-  // trailer length sizing. They are intentionally omitted from the deck
-  // layout so they don't inflate linear-ft or overhang figures.
-  void boxes;
-  void extraGasketPallets;
+  // trailer length sizing. Intentionally omitted from the deck layout so
+  // they don't inflate linear-ft or overhang figures.
+
 
 
   return items;
