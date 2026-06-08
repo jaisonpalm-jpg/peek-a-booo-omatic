@@ -25,10 +25,15 @@ function cycleOrientation(o: Orientation): Orientation {
   return o === "as-entered" ? "on-side" : o === "on-side" ? "upright" : "as-entered";
 }
 
+function isCurbAdapter(p: Piece): boolean {
+  return /\bcurb\b|adaptor|adapter/.test(p.description.toLowerCase());
+}
+
 function pieceFlags(p: Piece): string[] {
   const d = effectiveDims(p);
   const flags: string[] = [];
-  if (d.width > FEDERAL_LIMITS.maxWidthIn) flags.push("WIDE");
+  // Curb adapters are exempt from the WIDE flag — wide curbs are expected.
+  if (d.width > FEDERAL_LIMITS.maxWidthIn && !isCurbAdapter(p)) flags.push("WIDE");
   if (d.height > FEDERAL_LIMITS.maxHeightIn) flags.push("TALL");
   if (d.length > FEDERAL_LIMITS.maxLengthIn + FEDERAL_LIMITS.maxOverhangIn) flags.push("LONG");
   return flags;
