@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
-import { Download } from "lucide-react";
+import { Download, LogOut, Link2, Loader2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
 import { PieceTable } from "@/components/freight/PieceTable";
 import { RecommendationPanel } from "@/components/freight/RecommendationPanel";
 import { ScanSheetButton } from "@/components/freight/ScanSheetButton";
@@ -8,10 +9,12 @@ import { JobsSidebar } from "@/components/freight/JobsSidebar";
 
 import { recommend } from "@/lib/freight/recommend";
 import { exportLoadSummaryPdf } from "@/lib/freight/exportPdf";
-import { useJobs, makeJob } from "@/lib/freight/jobsStore";
+import { useJobs } from "@/lib/freight/jobsStore";
 import type { Piece } from "@/lib/freight/types";
+import { supabase } from "@/integrations/supabase/client";
+import { createShareLink } from "@/lib/share.functions";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
       { title: "LoadFit — Freight Trailer Estimator" },
@@ -20,28 +23,12 @@ export const Route = createFileRoute("/")({
         content:
           "Enter piece dimensions from a build sheet and get an instant trailer recommendation with legal oversize flags.",
       },
-      { property: "og:title", content: "LoadFit — Freight Trailer Estimator" },
-      {
-        property: "og:description",
-        content:
-          "Enter piece dimensions from a build sheet and get an instant trailer recommendation with legal oversize flags.",
-      },
     ],
   }),
   component: EstimatorPage,
 });
 
-// Seed data from the user's St Paul's Episcopal Church build sheet.
-const SEED_PIECES: Piece[] = [
-  { id: "seed-1", description: '8" Spiral Pipe (120")', length: 120, width: 8, height: 8, qty: 1, orientation: "as-entered" },
-  { id: "seed-2", description: '8" Spiral Pipe (80")', length: 80, width: 8, height: 8, qty: 1, orientation: "as-entered" },
-  { id: "seed-3", description: '24" Spiral Pipe (120")', length: 120, width: 24, height: 24, qty: 1, orientation: "as-entered" },
-  { id: "seed-4", description: '24" Gasketed Fittings', length: 36, width: 24, height: 24, qty: 8, orientation: "as-entered" },
-  { id: "seed-5", description: '8" Fittings & Reducers', length: 12, width: 8, height: 8, qty: 12, orientation: "as-entered" },
-];
-
 function EstimatorPage() {
-  const seedJob = useCallback(() => makeJob("St Paul's Episcopal Church", SEED_PIECES), []);
   const {
     hydrated,
     jobs,
@@ -51,14 +38,19 @@ function EstimatorPage() {
     selectJob,
     renameJob,
     updatePieces,
+    updateMaxCurbStack,
     deleteJob,
-  } = useJobs(seedJob);
+  } = useJobs();
 
   const pieces = activeJob?.pieces ?? [];
   const jobName = activeJob?.name ?? "";
-
-  const [maxCurbStack, setMaxCurbStack] = useState<number>(3);
+  const maxCurbStack = activeJob?.maxCurbStack ?? 3;
   const rec = useMemo(() => recommend(pieces, { maxCurbStack }), [pieces, maxCurbStack]);
+
+  const shareFn = useServerFn(createShareLink);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const setPieces = (next: Piece[] | ((prev: Piece[]) => Piece[])) => {
     if (!activeJob) return;
@@ -70,6 +62,42 @@ function EstimatorPage() {
     if (!activeJob) return;
     renameJob(activeJob.id, name);
   };
+
+  const setMaxCurbStack = (value: number) => {
+    if (!activeJob) return;
+    updateMaxCurbStack(activeJob.id, value);
+  };
+
+  const handleShare = useCallback(async () => {
+    if (!activeJob) return;
+    setShareLoading(true);
+    setShareUrl(null);
+    try {
+      const { token } = await shareFn({ data: { jobId: activeJob.id } });
+      const url = `${window.location.origin}/share/${token}`;
+      setShareUrl(url);
+      try {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch {
+        /* clipboard blocked — user can copy manually */
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setShareLoading(false);
+    }
+  }, [activeJob, shareFn]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.assign("/auth");
+  };
+
+  const handleCreate = useCallback(async () => {
+    await createJob("Untitled Job");
+  }, [createJob]);
 
   if (!hydrated) {
     return <div className="min-h-screen bg-background" aria-busy="true" />;
@@ -85,7 +113,7 @@ function EstimatorPage() {
                 jobs={jobs}
                 activeId={activeId}
                 onSelect={selectJob}
-                onCreate={() => createJob("Untitled Job")}
+                onCreate={handleCreate}
                 onDelete={deleteJob}
               />
               <div className="size-9 bg-rule items-center justify-center shrink-0 hidden sm:flex">
@@ -101,28 +129,70 @@ function EstimatorPage() {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => activeJob && exportLoadSummaryPdf({ jobName, pieces, rec })}
-              disabled={pieces.filter((p) => p.qty > 0 && p.length > 0).length === 0}
-              className="inline-flex items-center gap-2 text-xs font-bold py-2.5 px-4 bg-rule text-background uppercase tracking-widest hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <Download className="size-3.5" />
-              <span className="hidden sm:inline">Download PDF</span>
-              <span className="sm:hidden">PDF</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleShare}
+                disabled={!activeJob || shareLoading || pieces.filter((p) => p.qty > 0 && p.length > 0).length === 0}
+                className="inline-flex items-center gap-2 text-xs font-bold py-2.5 px-4 bg-background ring-2 ring-rule uppercase tracking-widest hover:bg-secondary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {shareLoading ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Link2 className="size-3.5" />
+                )}
+                <span className="hidden sm:inline">Share</span>
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  activeJob &&
+                  exportLoadSummaryPdf({ jobName, pieces, rec, shareUrl: shareUrl ?? undefined })
+                }
+                disabled={pieces.filter((p) => p.qty > 0 && p.length > 0).length === 0}
+                className="inline-flex items-center gap-2 text-xs font-bold py-2.5 px-4 bg-rule text-background uppercase tracking-widest hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Download className="size-3.5" />
+                <span className="hidden sm:inline">PDF</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="inline-flex items-center gap-2 text-xs font-bold py-2.5 px-3 bg-background ring-2 ring-rule uppercase tracking-widest hover:bg-secondary"
+                aria-label="Sign out"
+              >
+                <LogOut className="size-3.5" />
+              </button>
+            </div>
           </div>
+
+          {shareUrl && (
+            <div className="border-t border-rule bg-secondary">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 flex items-center gap-3 text-xs">
+                <Link2 className="size-3.5 shrink-0" />
+                <span className="font-bold uppercase tracking-widest text-[10px]">
+                  {copied ? "Copied" : "Share link"}
+                </span>
+                <a
+                  href={shareUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-mono truncate underline"
+                >
+                  {shareUrl}
+                </a>
+              </div>
+            </div>
+          )}
         </header>
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-
-
           {!activeJob ? (
             <div className="py-24 text-center">
               <p className="text-sm text-muted-foreground mb-4">No job selected.</p>
               <button
                 type="button"
-                onClick={() => createJob("Untitled Job")}
+                onClick={handleCreate}
                 className="text-xs font-bold py-2.5 px-4 bg-rule text-background uppercase tracking-widest hover:opacity-90"
               >
                 Create new job
@@ -180,7 +250,6 @@ function EstimatorPage() {
                 </div>
                 <RecommendationPanel rec={rec} />
               </aside>
-
             </div>
           )}
         </main>

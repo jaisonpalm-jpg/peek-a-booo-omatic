@@ -7,6 +7,7 @@ interface ExportArgs {
   jobName: string;
   pieces: Piece[];
   rec: Recommendation;
+  shareUrl?: string;
 }
 
 function fmt(n: number, digits = 0): string {
@@ -16,7 +17,7 @@ function fmt(n: number, digits = 0): string {
   });
 }
 
-export function exportLoadSummaryPdf({ jobName, pieces, rec }: ExportArgs): void {
+export function exportLoadSummaryPdf({ jobName, pieces, rec, shareUrl }: ExportArgs): void {
   const doc = new jsPDF({ unit: "pt", format: "letter" });
   const pageW = doc.internal.pageSize.getWidth();
   const marginX = 40;
@@ -47,7 +48,16 @@ export function exportLoadSummaryPdf({ jobName, pieces, rec }: ExportArgs): void
     marginX,
     y,
   );
-  y += 26;
+  y += 18;
+
+  if (shareUrl) {
+    doc.setFontSize(9);
+    doc.setTextColor(60, 60, 180);
+    doc.textWithLink(`View online: ${shareUrl}`, marginX, y, { url: shareUrl });
+    doc.setTextColor(100);
+    y += 14;
+  }
+  y += 8;
 
   // Recommendation box
   doc.setDrawColor(24, 24, 27);
