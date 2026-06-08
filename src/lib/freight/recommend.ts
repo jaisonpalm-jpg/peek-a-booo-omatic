@@ -882,6 +882,7 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
     notes,
     confidence,
     reason,
+    splitShipment,
   };
 }
 
