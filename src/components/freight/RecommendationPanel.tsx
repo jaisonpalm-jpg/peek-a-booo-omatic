@@ -18,8 +18,8 @@ function fmt(n: number, digits = 0): string {
 export function RecommendationPanel({ rec }: RecommendationPanelProps) {
   const { trailer, totals, oversize, withinLegalLimits, utilizationPct, deckAreaPct, alternates, candidates, notes, confidence, reason, splitShipment } = rec;
   const isSplit = !!splitShipment;
-  const fitCandidates = candidates.filter((c) => c.fits);
-  const hasEnclosedFit = fitCandidates.some((c) => ["box-16", "box-26", "dryvan-53"].includes(c.trailer.id));
+  const hasEnclosed = candidates.some((c) => ["box-16", "box-26", "dryvan-53"].includes(c.trailer.id));
+  const hasEnclosedFit = candidates.some((c) => c.fits && ["box-16", "box-26", "dryvan-53"].includes(c.trailer.id));
   const [tab, setTab] = useState<"enclosed" | "open">(hasEnclosedFit ? "enclosed" : "open");
 
   return (
