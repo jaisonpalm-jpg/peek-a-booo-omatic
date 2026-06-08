@@ -777,8 +777,16 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
   const notes: string[] = [];
   if (validPieces.length === 0) {
     notes.push("Add at least one piece to see a recommendation.");
-  } else if (!best) {
-    notes.push("Load exceeds the 53' dry van — split shipment or use a flatbed.");
+  const splitShipment = !best ? splitTwoTrucks(validPieces, maxCurbStack) ?? undefined : undefined;
+  if (!best && validPieces.length > 0) {
+    if (splitShipment) {
+      const [a, b] = splitShipment.trucks;
+      notes.push(
+        `Order too large for one truck — recommend splitting across 2 trucks: ${a.trailer.name} + ${b.trailer.name}.`,
+      );
+    } else {
+      notes.push("Load exceeds the largest standard equipment, even split across two trucks — specialized transport required.");
+    }
   }
   if (boxes.fillerBoxes > 0) {
     notes.push(`${boxes.fillerBoxes} packing box${boxes.fillerBoxes === 1 ? "" : "es"} (36"x36"x24") estimated, stacked 2 high.`);
