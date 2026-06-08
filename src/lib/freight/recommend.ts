@@ -602,13 +602,16 @@ function pickSmallestFitting(
   if (pieces.length === 0) return null;
   const subBoxes = packBoxes(pieces);
   const longest = longestPieceIn(pieces);
-  const widest = pieces.reduce((m, p) => Math.max(m, effectiveDims(p).width), 0);
+  const widestNonCurb = pieces.reduce(
+    (m, p) => (isRoofCurb(p) ? m : Math.max(m, effectiveDims(p).width)),
+    0,
+  );
   const tallest = pieces.reduce((m, p) => Math.max(m, effectiveDims(p).height), 0);
   const ids = allowOpenDeck ? CANDIDATE_TRAILER_IDS : CANDIDATE_TRAILER_IDS.filter((id) => !(OPEN_DECK_IDS as readonly string[]).includes(id));
   const pool = TRAILERS.filter((t) => (ids as readonly string[]).includes(t.id))
     .sort((a, b) => a.deckLength * a.deckWidth - b.deckLength * b.deckWidth);
   for (const t of pool) {
-    if (widest > t.deckWidth || tallest > t.maxHeight) continue;
+    if (widestNonCurb > t.deckWidth || tallest > t.maxHeight) continue;
     if (longest > t.deckLength + t.maxOverhang) continue;
     const items = buildDeckItems(pieces, subBoxes, t.maxHeight, maxCurbStack);
     const layout = packDeckLayout(items, t, "longest-first");
