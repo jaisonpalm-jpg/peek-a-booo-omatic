@@ -523,9 +523,10 @@ function floorAreaIn2(
     const side = Math.sqrt(s.footprint);
     area += withSeparation(side, side);
   }
-  // Filler boxes ride loose, stacked 2 high. Gasket boxes ride on 48x40 pallets.
+  // Filler boxes ride loose, stacked 2 high. Gasket pallets are accessory
+  // freight and excluded from order length sizing.
   area += (boxes.fillerBoxes * BOX_FOOTPRINT_IN2) / BOX_STACK;
-  area += boxes.gasketPallets * PALLET_FOOTPRINT_IN2;
+
   return area;
 }
 
