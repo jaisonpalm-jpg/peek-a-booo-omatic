@@ -115,7 +115,7 @@ export function useJobs(): UseJobsApi {
 
   const refresh = useCallback(async () => {
     const { jobs: rows } = await listFn();
-    const mapped = (rows as RowJob[]).map(fromRow);
+    const mapped = (rows as unknown as RowJob[]).map(fromRow);
     setJobs(mapped);
     return mapped;
   }, [listFn]);
