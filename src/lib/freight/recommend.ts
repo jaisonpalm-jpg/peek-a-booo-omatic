@@ -322,33 +322,12 @@ function buildDeckItems(
     });
   }
 
-  // Gasket pallets — required + any "extra" capacity pallets
-  const gasketWeightTotal = pieces
-    .filter(isNeopreneGasket)
-    .reduce((s, p) => s + (p.weight ?? 0) * p.qty, 0);
-  const wPerPallet =
-    boxes.gasketPallets > 0 ? gasketWeightTotal / boxes.gasketPallets : 0;
-  for (let i = 0; i < boxes.gasketPallets; i++) {
-    items.push({
-      kind: "gasket-pallet",
-      label: `Gasket pallet`,
-      lengthIn: PALLET_L,
-      widthIn: PALLET_W,
-      heightIn: GASKET_PALLET_HEIGHT_IN,
-      units: BOXES_PER_PALLET,
-      weightLb: wPerPallet > 0 ? wPerPallet : undefined,
-    });
-  }
-  for (let i = 0; i < extraGasketPallets; i++) {
-    items.push({
-      kind: "gasket-pallet",
-      label: `Extra gasket pallet`,
-      lengthIn: PALLET_L,
-      widthIn: PALLET_W,
-      heightIn: GASKET_PALLET_HEIGHT_IN,
-      units: BOXES_PER_PALLET,
-    });
-  }
+  // Gasket pallets are an ACCESSORY — they ship alongside but do not drive
+  // trailer length sizing. They are intentionally omitted from the deck
+  // layout so they don't inflate linear-ft or overhang figures.
+  void boxes;
+  void extraGasketPallets;
+
 
   return items;
 }
