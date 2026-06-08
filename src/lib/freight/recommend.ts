@@ -291,7 +291,7 @@ function buildDeckItems(
     if (isBoxable(p) || isRoofCurb(p) || !isPipe(p)) continue;
     const d = effectiveDims(p);
     const diameter = Math.max(d.width, d.height);
-    const stack = pipeStackCount(diameter);
+    const stack = pipeStackCount(p, diameter);
     let remaining = p.qty;
     while (remaining > 0) {
       const inBundle = Math.min(stack, remaining);
@@ -561,7 +561,7 @@ function floorAreaIn2(
     const d = effectiveDims(p);
     if (isPipe(p)) {
       const diameter = Math.max(d.width, d.height);
-      const stack = pipeStackCount(diameter);
+      const stack = pipeStackCount(p, diameter);
       area += (withSeparation(d.length, d.width) * p.qty) / stack;
     } else {
       area += withSeparation(d.length, d.width) * p.qty;
