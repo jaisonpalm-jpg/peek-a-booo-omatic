@@ -401,9 +401,39 @@ function packDeckLayout(
     ) {
       [l, w] = [w, l];
     }
-    if (w > deckW || it.heightIn > trailer.maxHeight) {
+    // Curb adapters may legitimately exceed the deck width — they ship as
+    // permitted oversize loads. Place them anyway, occupying the full deck
+    // width row (no other item can share the shelf).
+    const oversizeWide = it.kind === "curb-stack" && w > deckW;
+    if ((w > deckW && !oversizeWide) || it.heightIn > trailer.maxHeight) {
       allFit = false;
       unplaced++;
+      continue;
+    }
+
+    if (oversizeWide) {
+      // Force a fresh shelf and consume the full deck width.
+      if (shelfY > 0) {
+        cursorX += shelfLen + buffer;
+        shelfY = 0;
+        shelfLen = 0;
+      }
+      if (cursorX + l > maxLen) {
+        allFit = false;
+        unplaced++;
+        continue;
+      }
+      const overhangIn = Math.max(0, cursorX + l - trailer.deckLength);
+      placements.push({
+        item: { ...it, lengthIn: l, widthIn: w, oversize: true },
+        x: cursorX,
+        y: 0,
+        overhang: overhangIn > 0,
+        overhangIn,
+      });
+      // Block the rest of the width so nothing shares this shelf.
+      shelfY = deckW;
+      shelfLen = l;
       continue;
     }
 
