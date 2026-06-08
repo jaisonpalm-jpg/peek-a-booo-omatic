@@ -56,7 +56,11 @@ const BOX_FOOTPRINT_IN2 = BOX_L * BOX_W;
 const BOX_STACK = 2;
 
 function isPipe(p: Piece): boolean {
-  return /\bpipe\b|duct|tube|tubing|conduit/.test(p.description.toLowerCase());
+  return /\bpipe\b|duct|tube|tubing|conduit|spiral/.test(p.description.toLowerCase());
+}
+
+function isSpiral(p: Piece): boolean {
+  return /spiral/.test(p.description.toLowerCase());
 }
 
 function isRoofCurb(p: Piece): boolean {
@@ -87,10 +91,24 @@ function isBoxable(piece: Piece): boolean {
 }
 
 /**
- * How many pipes of this diameter can be stacked on top of each other.
- * Small pipe stacks higher; large pipe doesn't stack.
+ * Smart Stack toggle — when enabled (default), apply stacking rules:
+ *   - Spiral pipe/duct stacks up to 3 high regardless of diameter
+ *   - Pipes ≤6" stack 3, ≤12" stack 2, larger lay flat
+ *   - Roof curbs nest per max stack count, capped by trailer height
+ * When disabled, every loose piece lays flat (stack of 1).
+ * Threaded as a module-scoped flag set by the public entry points
+ * (recommend / evaluateManualSplit) to avoid a wide signature change.
  */
-function pipeStackCount(diameterIn: number): number {
+let SMART_STACK = true;
+
+/**
+ * How many pipes can be stacked on top of each other for a given piece.
+ * Smart Stack rules: spirals always 3-high; small pipe stacks higher;
+ * large pipe doesn't stack. Returns 1 when Smart Stack is disabled.
+ */
+function pipeStackCount(piece: Piece, diameterIn: number): number {
+  if (!SMART_STACK) return 1;
+  if (isSpiral(piece)) return 3;
   if (diameterIn <= 6) return 3;
   if (diameterIn <= 12) return 2;
   return 1;
