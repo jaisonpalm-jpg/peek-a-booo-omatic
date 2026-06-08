@@ -186,7 +186,7 @@ function EstimatorPage() {
           )}
         </header>
 
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 xl:px-10 py-6 sm:py-8">
           {!activeJob ? (
             <div className="py-24 text-center">
               <p className="text-sm text-muted-foreground mb-4">No job selected.</p>
