@@ -598,7 +598,7 @@ function pickSmallestFitting(
   pieces: Piece[],
   maxCurbStack: number,
   allowOpenDeck = true,
-): { trailer: TrailerSpec; linearFt: number; deckAreaPct: number } | null {
+): { trailer: TrailerSpec; linearFt: number; deckAreaPct: number; layout: DeckLayout } | null {
   if (pieces.length === 0) return null;
   const subBoxes = packBoxes(pieces);
   const longest = longestPieceIn(pieces);
@@ -619,7 +619,7 @@ function pickSmallestFitting(
     const linearIn = needed / t.deckWidth;
     const deckAreaPct = Math.min(100, (needed / (t.deckLength * t.deckWidth)) * 100);
     if (layout.fits && linearIn <= t.deckLength) {
-      return { trailer: t, linearFt: linearIn / 12, deckAreaPct };
+      return { trailer: t, linearFt: linearIn / 12, deckAreaPct, layout };
     }
   }
   return null;
@@ -670,9 +670,12 @@ function splitTwoTrucks(
     if (onPrimary.length === 0 || onSecondary.length === 0) continue;
     const secondPick = pickSmallestFitting(onSecondary, maxCurbStack);
     if (!secondPick) continue;
-    const firstNeed = floorAreaIn2(onPrimary, packBoxes(onPrimary), primary.maxHeight, maxCurbStack);
+    const firstBoxes = packBoxes(onPrimary);
+    const firstNeed = floorAreaIn2(onPrimary, firstBoxes, primary.maxHeight, maxCurbStack);
     const firstLinearFt = firstNeed / primary.deckWidth / 12;
     const firstDeckPct = Math.min(100, (firstNeed / (primary.deckLength * primary.deckWidth)) * 100);
+    const firstItems = buildDeckItems(onPrimary, firstBoxes, primary.maxHeight, maxCurbStack);
+    const firstLayout = packDeckLayout(firstItems, primary, "longest-first");
 
     const sumPieces = (arr: Piece[]) => arr.reduce((n, p) => n + p.qty, 0);
     return {
@@ -685,6 +688,7 @@ function splitTwoTrucks(
           summary: `${sumPieces(onPrimary)} piece${sumPieces(onPrimary) === 1 ? "" : "s"} (longest / largest)`,
           linearFt: firstLinearFt,
           deckAreaPct: firstDeckPct,
+          layout: firstLayout,
         },
         {
           trailer: secondPick.trailer,
@@ -692,6 +696,7 @@ function splitTwoTrucks(
           summary: `${sumPieces(onSecondary)} piece${sumPieces(onSecondary) === 1 ? "" : "s"} (remaining freight)`,
           linearFt: secondPick.linearFt,
           deckAreaPct: secondPick.deckAreaPct,
+          layout: secondPick.layout,
         },
       ],
     };

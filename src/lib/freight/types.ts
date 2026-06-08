@@ -158,6 +158,8 @@ export interface SplitTruck {
   summary: string;
   linearFt: number;
   deckAreaPct: number;
+  /** Packed deck layout for rendering 2D/3D diagram. */
+  layout: DeckLayout;
 }
 
 export interface SplitShipment {
