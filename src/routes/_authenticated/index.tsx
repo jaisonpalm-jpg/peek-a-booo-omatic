@@ -46,7 +46,11 @@ function EstimatorPage() {
   const pieces = activeJob?.pieces ?? [];
   const jobName = activeJob?.name ?? "";
   const maxCurbStack = activeJob?.maxCurbStack ?? 3;
-  const rec = useMemo(() => recommend(pieces, { maxCurbStack }), [pieces, maxCurbStack]);
+  const [smartStack, setSmartStack] = useState(true);
+  const rec = useMemo(
+    () => recommend(pieces, { maxCurbStack, smartStack }),
+    [pieces, maxCurbStack, smartStack],
+  );
 
   const shareFn = useServerFn(createShareLink);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
