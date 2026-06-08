@@ -254,7 +254,7 @@ function EstimatorPage() {
           )}
         </main>
 
-        <footer className="max-w-7xl mx-auto px-4 sm:px-6 py-8 border-t border-border mt-12 text-xs text-muted-foreground">
+        <footer className="max-w-screen-2xl mx-auto px-4 sm:px-6 xl:px-10 py-8 border-t border-border mt-12 text-xs text-muted-foreground">
           Federal limits: 8&apos;6&quot; width · 13&apos;6&quot; height · 53&apos; length · 4&apos; rear overhang.
           State permits may vary.
         </footer>
