@@ -14,7 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      jobs: {
+        Row: {
+          created_at: string
+          id: string
+          max_curb_stack: number
+          name: string
+          pieces: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          max_curb_stack?: number
+          name?: string
+          pieces?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          max_curb_stack?: number
+          name?: string
+          pieces?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      share_links: {
+        Row: {
+          created_at: string
+          job_id: string | null
+          max_curb_stack: number
+          name: string
+          pieces: Json
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          job_id?: string | null
+          max_curb_stack?: number
+          name: string
+          pieces: Json
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          job_id?: string | null
+          max_curb_stack?: number
+          name?: string
+          pieces?: Json
+          token?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "share_links_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
