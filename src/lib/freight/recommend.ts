@@ -32,11 +32,7 @@ function cubeFt3(dims: EffectiveDims, qty: number): number {
 function flagsForPiece(piece: Piece): OversizeFlag[] {
   const d = effectiveDims(piece);
   const out: OversizeFlag[] = [];
-  // Curb adapters are an accepted exception for width — they routinely run
-  // wider than 8'6" and are handled as standard roof-curb freight, not as a
-  // permitted oversize load. Skip the width flag for them.
-  const curbException = isRoofCurb(piece);
-  if (d.width > FEDERAL_LIMITS.maxWidthIn && !curbException) {
+  if (d.width > FEDERAL_LIMITS.maxWidthIn) {
     out.push({ pieceId: piece.id, reason: "width", detail: `Width ${(d.width / 12).toFixed(1)}' exceeds 8'6" legal limit.` });
   }
   if (d.height > FEDERAL_LIMITS.maxHeightIn) {
@@ -405,9 +401,39 @@ function packDeckLayout(
     ) {
       [l, w] = [w, l];
     }
-    if (w > deckW || it.heightIn > trailer.maxHeight) {
+    // Curb adapters may legitimately exceed the deck width — they ship as
+    // permitted oversize loads. Place them anyway, occupying the full deck
+    // width row (no other item can share the shelf).
+    const oversizeWide = it.kind === "curb-stack" && w > deckW;
+    if ((w > deckW && !oversizeWide) || it.heightIn > trailer.maxHeight) {
       allFit = false;
       unplaced++;
+      continue;
+    }
+
+    if (oversizeWide) {
+      // Force a fresh shelf and consume the full deck width.
+      if (shelfY > 0) {
+        cursorX += shelfLen + buffer;
+        shelfY = 0;
+        shelfLen = 0;
+      }
+      if (cursorX + l > maxLen) {
+        allFit = false;
+        unplaced++;
+        continue;
+      }
+      const overhangIn = Math.max(0, cursorX + l - trailer.deckLength);
+      placements.push({
+        item: { ...it, lengthIn: l, widthIn: w, oversize: true },
+        x: cursorX,
+        y: 0,
+        overhang: overhangIn > 0,
+        overhangIn,
+      });
+      // Block the rest of the width so nothing shares this shelf.
+      shelfY = deckW;
+      shelfLen = l;
       continue;
     }
 
@@ -576,13 +602,16 @@ function pickSmallestFitting(
   if (pieces.length === 0) return null;
   const subBoxes = packBoxes(pieces);
   const longest = longestPieceIn(pieces);
-  const widest = pieces.reduce((m, p) => Math.max(m, effectiveDims(p).width), 0);
+  const widestNonCurb = pieces.reduce(
+    (m, p) => (isRoofCurb(p) ? m : Math.max(m, effectiveDims(p).width)),
+    0,
+  );
   const tallest = pieces.reduce((m, p) => Math.max(m, effectiveDims(p).height), 0);
   const ids = allowOpenDeck ? CANDIDATE_TRAILER_IDS : CANDIDATE_TRAILER_IDS.filter((id) => !(OPEN_DECK_IDS as readonly string[]).includes(id));
   const pool = TRAILERS.filter((t) => (ids as readonly string[]).includes(t.id))
     .sort((a, b) => a.deckLength * a.deckWidth - b.deckLength * b.deckWidth);
   for (const t of pool) {
-    if (widest > t.deckWidth || tallest > t.maxHeight) continue;
+    if (widestNonCurb > t.deckWidth || tallest > t.maxHeight) continue;
     if (longest > t.deckLength + t.maxOverhang) continue;
     const items = buildDeckItems(pieces, subBoxes, t.maxHeight, maxCurbStack);
     const layout = packDeckLayout(items, t, "longest-first");
@@ -625,7 +654,10 @@ function splitTwoTrucks(
       const layout = packDeckLayout(items, primary, "longest-first");
       const needed = floorAreaIn2(trial, subBoxes, primary.maxHeight, maxCurbStack);
       const linearIn = needed / primary.deckWidth;
-      const widest = trial.reduce((m, q) => Math.max(m, effectiveDims(q).width), 0);
+      const widest = trial.reduce(
+        (m, q) => (isRoofCurb(q) ? m : Math.max(m, effectiveDims(q).width)),
+        0,
+      );
       const tallest = trial.reduce((m, q) => Math.max(m, effectiveDims(q).height), 0);
       const fits =
         layout.fits &&
@@ -734,7 +766,13 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
       // Required deck length = how far back the load reaches if spread across the deck width.
       const linearIn = needed / t.deckWidth;
       const fitsLength = longestLoose <= t.deckLength + t.maxOverhang && linearIn <= t.deckLength;
-      const fitsWidth = widestIn <= t.deckWidth;
+      // Wide curb adapters are allowed as permitted oversize loads; only
+      // non-curb pieces need to fit within the legal deck width here.
+      const widestNonCurbIn = validPieces.reduce(
+        (m, p) => (isRoofCurb(p) ? m : Math.max(m, effectiveDims(p).width)),
+        0,
+      );
+      const fitsWidth = widestNonCurbIn <= t.deckWidth;
       const fitsHeight = tallestIn <= t.maxHeight;
       const fits = fitsLength && fitsWidth && fitsHeight && layout.fits;
       const utilizationPct = t.deckLength > 0 ? Math.min(100, (linearIn / t.deckLength) * 100) : 0;
