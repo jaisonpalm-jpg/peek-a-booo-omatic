@@ -4,7 +4,7 @@ import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
 import { getShareLink } from "@/lib/share.functions";
 import { recommend } from "@/lib/freight/recommend";
 import { RecommendationPanel } from "@/components/freight/RecommendationPanel";
-import { PieceTable } from "@/components/freight/PieceTable";
+import { effectiveDims } from "@/lib/freight/recommend";
 import type { Piece } from "@/lib/freight/types";
 
 const shareQuery = (token: string) =>
@@ -57,7 +57,7 @@ export const Route = createFileRoute("/share/$token")({
 function SharePage() {
   const { token } = Route.useParams();
   const { data } = useSuspenseQuery(shareQuery(token));
-  const pieces = (data.pieces as Piece[]) ?? [];
+  const pieces = (data.pieces as unknown as Piece[]) ?? [];
   const maxCurbStack = data.max_curb_stack ?? 3;
   const rec = useMemo(() => recommend(pieces, { maxCurbStack }), [pieces, maxCurbStack]);
 
@@ -104,7 +104,33 @@ function SharePage() {
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
               Manifest · {pieces.length} line{pieces.length === 1 ? "" : "s"}
             </p>
-            <PieceTable pieces={pieces} onChange={() => {}} readOnly />
+            <div className="bg-card ring-2 ring-rule overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead className="bg-secondary">
+                  <tr className="text-left">
+                    <th className="px-3 py-2 font-bold uppercase tracking-widest text-[10px]">#</th>
+                    <th className="px-3 py-2 font-bold uppercase tracking-widest text-[10px]">Description</th>
+                    <th className="px-3 py-2 font-bold uppercase tracking-widest text-[10px]">L×W×H (in)</th>
+                    <th className="px-3 py-2 font-bold uppercase tracking-widest text-[10px] text-right">Qty</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pieces.map((p, i) => {
+                    const d = effectiveDims(p);
+                    return (
+                      <tr key={p.id} className="border-t border-border">
+                        <td className="px-3 py-2 font-mono">{i + 1}</td>
+                        <td className="px-3 py-2">{p.description || "—"}</td>
+                        <td className="px-3 py-2 font-mono">
+                          {d.length} × {d.width} × {d.height}
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono">{p.qty}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </section>
           <aside className="lg:col-span-5 lg:sticky lg:top-8 lg:self-start">
             <RecommendationPanel rec={rec} />
