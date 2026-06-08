@@ -16,9 +16,11 @@ function fmt(n: number, digits = 0): string {
 }
 
 export function RecommendationPanel({ rec }: RecommendationPanelProps) {
-  const { trailer, totals, oversize, withinLegalLimits, utilizationPct, deckAreaPct, alternates, candidates, notes, confidence, reason } = rec;
-  const hasEnclosed = candidates.some((c) => ["box-16", "box-26", "dryvan-53"].includes(c.trailer.id));
-  const [tab, setTab] = useState<"enclosed" | "open">(hasEnclosed ? "enclosed" : "open");
+  const { trailer, totals, oversize, withinLegalLimits, utilizationPct, deckAreaPct, alternates, candidates, notes, confidence, reason, splitShipment } = rec;
+  const isSplit = !!splitShipment;
+  const fitCandidates = candidates.filter((c) => c.fits);
+  const hasEnclosedFit = fitCandidates.some((c) => ["box-16", "box-26", "dryvan-53"].includes(c.trailer.id));
+  const [tab, setTab] = useState<"enclosed" | "open">(hasEnclosedFit ? "enclosed" : "open");
 
   return (
     <div className="space-y-6">
@@ -28,7 +30,12 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
             <span className="px-2.5 py-1 bg-rule text-background text-[10px] font-bold uppercase tracking-widest">
               Recommendation
             </span>
-            {trailer ? (
+            {isSplit ? (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-warning">
+                <AlertTriangle className="size-3.5" />
+                Multi-truck split
+              </span>
+            ) : trailer ? (
               withinLegalLimits ? (
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-success">
                   <CheckCircle2 className="size-3.5" />
@@ -42,16 +49,26 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
               )
             ) : null}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <Truck className="size-7 text-foreground" />
-            <h2 className="text-3xl font-semibold tracking-tight">
-              {trailer ? trailer.name : "—"}
-            </h2>
+            {isSplit ? (
+              <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+                {splitShipment!.trucks.map((t) => t.trailer.shortName ?? t.trailer.name).join(" + ")}
+              </h2>
+            ) : (
+              <h2 className="text-3xl font-semibold tracking-tight">
+                {trailer ? trailer.name : "—"}
+              </h2>
+            )}
           </div>
-          {trailer && (
+          {isSplit ? (
+            <p className="text-sm text-foreground/80 mt-2 leading-snug">
+              {splitShipment!.reason}
+            </p>
+          ) : trailer && (
             <p className="text-sm text-muted-foreground mt-1.5">{trailer.description}</p>
           )}
-          {trailer && (
+          {(trailer || isSplit) && (
             <div className="mt-4 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -71,6 +88,7 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
             </div>
           )}
         </div>
+
 
         <div className="grid grid-cols-2 gap-px bg-border">
           <Stat label="Total Volume" value={`${fmt(totals.cubeFt3, 0)}`} unit="ft³" />
@@ -155,41 +173,44 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
         )}
       </div>
 
-      <div className="bg-card ring-2 ring-rule">
-        <div className={`flex border-b-2 border-rule ${!hasEnclosed ? "hidden" : ""}`}>
-          <button
-            type="button"
-            onClick={() => setTab("enclosed")}
-            className={`flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-widest transition-colors ${
-              tab === "enclosed"
-                ? "bg-card text-foreground border-b-0"
-                : "bg-secondary text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Box Trucks & Dry Van
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("open")}
-            className={`flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-widest transition-colors ${
-              tab === "open"
-                ? "bg-card text-foreground border-b-0"
-                : "bg-secondary text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Flatbed / Conestoga / Hotshot
-          </button>
-        </div>
+      {!isSplit && fitCandidates.length > 0 && (
+        <div className="bg-card ring-2 ring-rule">
+          <div className={`flex border-b-2 border-rule ${!hasEnclosedFit ? "hidden" : ""}`}>
+            <button
+              type="button"
+              onClick={() => setTab("enclosed")}
+              className={`flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                tab === "enclosed"
+                  ? "bg-card text-foreground border-b-0"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Box Trucks & Dry Van
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("open")}
+              className={`flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                tab === "open"
+                  ? "bg-card text-foreground border-b-0"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Flatbed / Conestoga / Hotshot
+            </button>
+          </div>
 
-        <div className="p-4">
-          {tab === "enclosed" && (
-            <EnclosedCandidates candidates={candidates} pickId={trailer?.id} />
-          )}
-          {tab === "open" && (
-            <OpenDeckCandidates candidates={candidates} pickId={trailer?.id} />
-          )}
+          <div className="p-4">
+            {tab === "enclosed" && (
+              <EnclosedCandidates candidates={fitCandidates} pickId={trailer?.id} />
+            )}
+            {tab === "open" && (
+              <OpenDeckCandidates candidates={fitCandidates} pickId={trailer?.id} />
+            )}
+          </div>
         </div>
-      </div>
+      )}
+
 
       {rec.splitShipment && (
         <div className="bg-card ring-2 ring-warning/60 overflow-hidden">
@@ -398,7 +419,7 @@ function OpenDeckCandidates({ candidates, pickId }: { candidates: Recommendation
       </div>
       <div className="space-y-3 pt-2">
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-          Load Layout Per Trailer — Compare Packing Scenarios
+          Recommended Load Layout — Compare Packing Scenarios
         </p>
         <p className="text-xs text-muted-foreground">
           Switch between scenarios to compare trade-offs: <strong>Balanced</strong> is the
@@ -407,8 +428,9 @@ function OpenDeckCandidates({ candidates, pickId }: { candidates: Recommendation
           gasket pallets.
         </p>
         <div className="divide-y-2 divide-rule">
-          {list.map((c) => {
-            const isPick = pickId === c.trailer.id;
+          {list.filter((c) => c.trailer.id === pickId).map((c) => {
+            const isPick = true;
+
             return (
               <div key={c.trailer.id} className="py-4 space-y-3">
                 <div className="flex items-center justify-between flex-wrap gap-1">
