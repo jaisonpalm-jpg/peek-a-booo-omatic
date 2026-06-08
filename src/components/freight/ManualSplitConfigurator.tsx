@@ -13,6 +13,7 @@ interface Props {
   pieces: Piece[];
   rec: Recommendation;
   maxCurbStack: number;
+  smartStack?: boolean;
 }
 
 const TRAILER_OPTIONS = TRAILERS.filter((t) =>
