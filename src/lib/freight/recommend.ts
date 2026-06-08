@@ -680,9 +680,10 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
   }
   if (boxes.gasketBoxes > 0) {
     notes.push(
-      `${boxes.gasketBoxes} neoprene gasket roll box${boxes.gasketBoxes === 1 ? "" : "es"} (up to ${GASKET_ROLLS_PER_BOX} 25ft rolls per 36"x36"x24" box) palletized on ${boxes.gasketPallets} 48"x40" pallet${boxes.gasketPallets === 1 ? "" : "s"} (4 boxes/pallet).`,
+      `${boxes.gasketBoxes} neoprene gasket roll box${boxes.gasketBoxes === 1 ? "" : "es"} (up to ${GASKET_ROLLS_PER_BOX} 25ft rolls per 36"x36"x24" box) palletized on ${boxes.gasketPallets} 48"x40" pallet${boxes.gasketPallets === 1 ? "" : "s"} (4 boxes/pallet) — accessory freight, not counted in order length.`,
     );
   }
+
   const curbStacks = best?.curbStacks ?? candidates.at(-1)?.curbStacks ?? [];
   const totalCurbs = curbStacks.reduce((n, s) => n + s.count, 0);
   if (totalCurbs > 0) {
