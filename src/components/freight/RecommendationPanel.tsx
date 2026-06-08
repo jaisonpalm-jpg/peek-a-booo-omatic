@@ -173,7 +173,7 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
         )}
       </div>
 
-      {!isSplit && fitCandidates.length > 0 && (
+      {!isSplit && candidates.length > 0 && (
         <div className="bg-card ring-2 ring-rule">
           <div className={`flex border-b-2 border-rule ${!hasEnclosedFit ? "hidden" : ""}`}>
             <button
@@ -202,10 +202,10 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
 
           <div className="p-4">
             {tab === "enclosed" && (
-              <EnclosedCandidates candidates={fitCandidates} pickId={trailer?.id} />
+              <EnclosedCandidates candidates={candidates} pickId={trailer?.id} />
             )}
             {tab === "open" && (
-              <OpenDeckCandidates candidates={fitCandidates} pickId={trailer?.id} />
+              <OpenDeckCandidates candidates={candidates} pickId={trailer?.id} />
             )}
           </div>
         </div>
