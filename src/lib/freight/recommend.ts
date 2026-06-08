@@ -245,8 +245,9 @@ function buildDeckItems(
   boxes: BoxBreakdown,
   maxHeightIn: number,
   maxCurbStack: number,
-  extraGasketPallets = 0,
+  _extraGasketPallets = 0,
 ): DeckItem[] {
+
   const items: DeckItem[] = [];
 
   // Curb stacks
