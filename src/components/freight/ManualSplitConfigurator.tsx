@@ -13,6 +13,7 @@ interface Props {
   pieces: Piece[];
   rec: Recommendation;
   maxCurbStack: number;
+  smartStack?: boolean;
 }
 
 const TRAILER_OPTIONS = TRAILERS.filter((t) =>
@@ -37,7 +38,7 @@ function seedConfigs(rec: Recommendation): ManualTruckConfig[] {
   return [];
 }
 
-export function ManualSplitConfigurator({ pieces, rec, maxCurbStack }: Props) {
+export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack = true }: Props) {
   const validPieces = useMemo(
     () => pieces.filter((p) => p.qty > 0 && p.length > 0),
     [pieces],
@@ -61,8 +62,8 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack }: Props) {
   }, [validPieces]);
 
   const evalResult = useMemo(
-    () => evaluateManualSplit(validPieces, configs, { maxCurbStack }),
-    [validPieces, configs, maxCurbStack],
+    () => evaluateManualSplit(validPieces, configs, { maxCurbStack, smartStack }),
+    [validPieces, configs, maxCurbStack, smartStack],
   );
 
   const pieceToTruck = useMemo(() => {
@@ -111,7 +112,7 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack }: Props) {
           const trial = next.map((c, j) =>
             j === i ? { ...c, pieceIds: [...c.pieceIds, p.id] } : c,
           );
-          const ev = evaluateManualSplit(validPieces, trial, { maxCurbStack });
+          const ev = evaluateManualSplit(validPieces, trial, { maxCurbStack, smartStack });
           const t = ev.trucks[i];
           if (t.fits && t.deckAreaPct < bestPct) {
             bestPct = t.deckAreaPct;
@@ -122,7 +123,7 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack }: Props) {
           // Fall back: assign to least-loaded truck even if overflow.
           let minPct = Number.POSITIVE_INFINITY;
           for (let i = 0; i < next.length; i++) {
-            const ev = evaluateManualSplit(validPieces, next, { maxCurbStack });
+            const ev = evaluateManualSplit(validPieces, next, { maxCurbStack, smartStack });
             if (ev.trucks[i].deckAreaPct < minPct) {
               minPct = ev.trucks[i].deckAreaPct;
               bestIdx = i;

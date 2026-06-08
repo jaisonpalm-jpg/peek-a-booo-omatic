@@ -46,7 +46,11 @@ function EstimatorPage() {
   const pieces = activeJob?.pieces ?? [];
   const jobName = activeJob?.name ?? "";
   const maxCurbStack = activeJob?.maxCurbStack ?? 3;
-  const rec = useMemo(() => recommend(pieces, { maxCurbStack }), [pieces, maxCurbStack]);
+  const [smartStack, setSmartStack] = useState(true);
+  const rec = useMemo(
+    () => recommend(pieces, { maxCurbStack, smartStack }),
+    [pieces, maxCurbStack, smartStack],
+  );
 
   const shareFn = useServerFn(createShareLink);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
@@ -230,32 +234,59 @@ function EstimatorPage() {
                 <div className="inline-flex items-center gap-2 bg-rule text-background px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em]">
                   Row 2 · Recommendation
                 </div>
-                <div className="bg-card ring-2 ring-rule p-4 space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <label htmlFor="curb-stack" className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                      Max Curbs / Stack
-                    </label>
-                    <span className="font-mono text-sm font-bold">{maxCurbStack}</span>
+                <div className="bg-card ring-2 ring-rule p-4 space-y-4">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={smartStack}
+                      onChange={(e) => setSmartStack(e.target.checked)}
+                      className="mt-0.5 size-4 accent-foreground shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
+                          Smart Stack
+                        </span>
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground">
+                          {smartStack ? "ON" : "OFF"}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground leading-snug mt-1">
+                        Auto-stacks pieces by type: spiral pipe/duct up to 3 high,
+                        pipes ≤6&quot; up to 3, ≤12&quot; up to 2, larger lay flat.
+                        Curb adapters follow the slider below. Turn off to lay every loose
+                        piece flat.
+                      </p>
+                    </div>
+                  </label>
+
+                  <div className="border-t border-rule pt-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <label htmlFor="curb-stack" className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                        Max Curbs / Stack
+                      </label>
+                      <span className="font-mono text-sm font-bold">{maxCurbStack}</span>
+                    </div>
+                    <input
+                      id="curb-stack"
+                      type="range"
+                      min={1}
+                      max={6}
+                      step={1}
+                      value={maxCurbStack}
+                      onChange={(e) => setMaxCurbStack(Number(e.target.value))}
+                      className="w-full accent-foreground mt-2"
+                    />
+                    <p className="text-[11px] text-muted-foreground leading-snug mt-1">
+                      Curb adapters stack on flatbeds with 2&quot; dunnage gaps. Trailer max load
+                      height still caps the stack regardless of this setting.
+                    </p>
                   </div>
-                  <input
-                    id="curb-stack"
-                    type="range"
-                    min={1}
-                    max={6}
-                    step={1}
-                    value={maxCurbStack}
-                    onChange={(e) => setMaxCurbStack(Number(e.target.value))}
-                    className="w-full accent-foreground"
-                  />
-                  <p className="text-[11px] text-muted-foreground leading-snug">
-                    Curb adapters stack on flatbeds with 2&quot; dunnage gaps. Trailer max load
-                    height still caps the stack regardless of this setting.
-                  </p>
                 </div>
                 <RecommendationPanel rec={rec} />
               </section>
 
-              <ManualSplitConfigurator pieces={pieces} rec={rec} maxCurbStack={maxCurbStack} />
+              <ManualSplitConfigurator pieces={pieces} rec={rec} maxCurbStack={maxCurbStack} smartStack={smartStack} />
 
 
             </div>

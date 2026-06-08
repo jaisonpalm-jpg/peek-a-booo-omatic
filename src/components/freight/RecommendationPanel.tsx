@@ -18,8 +18,8 @@ function fmt(n: number, digits = 0): string {
 export function RecommendationPanel({ rec }: RecommendationPanelProps) {
   const { trailer, totals, oversize, withinLegalLimits, utilizationPct, deckAreaPct, alternates, candidates, notes, confidence, reason, splitShipment } = rec;
   const isSplit = !!splitShipment;
-  const fitCandidates = candidates.filter((c) => c.fits);
-  const hasEnclosedFit = fitCandidates.some((c) => ["box-16", "box-26", "dryvan-53"].includes(c.trailer.id));
+  const hasEnclosed = candidates.some((c) => ["box-16", "box-26", "dryvan-53"].includes(c.trailer.id));
+  const hasEnclosedFit = candidates.some((c) => c.fits && ["box-16", "box-26", "dryvan-53"].includes(c.trailer.id));
   const [tab, setTab] = useState<"enclosed" | "open">(hasEnclosedFit ? "enclosed" : "open");
 
   return (
@@ -173,9 +173,9 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
         )}
       </div>
 
-      {!isSplit && fitCandidates.length > 0 && (
+      {!isSplit && candidates.length > 0 && (
         <div className="bg-card ring-2 ring-rule">
-          <div className={`flex border-b-2 border-rule ${!hasEnclosedFit ? "hidden" : ""}`}>
+          <div className={`flex border-b-2 border-rule ${!hasEnclosed ? "hidden" : ""}`}>
             <button
               type="button"
               onClick={() => setTab("enclosed")}
@@ -202,10 +202,10 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
 
           <div className="p-4">
             {tab === "enclosed" && (
-              <EnclosedCandidates candidates={fitCandidates} pickId={trailer?.id} />
+              <EnclosedCandidates candidates={candidates} pickId={trailer?.id} />
             )}
             {tab === "open" && (
-              <OpenDeckCandidates candidates={fitCandidates} pickId={trailer?.id} />
+              <OpenDeckCandidates candidates={candidates} pickId={trailer?.id} />
             )}
           </div>
         </div>

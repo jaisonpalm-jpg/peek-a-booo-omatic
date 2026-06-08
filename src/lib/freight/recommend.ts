@@ -56,7 +56,11 @@ const BOX_FOOTPRINT_IN2 = BOX_L * BOX_W;
 const BOX_STACK = 2;
 
 function isPipe(p: Piece): boolean {
-  return /\bpipe\b|duct|tube|tubing|conduit/.test(p.description.toLowerCase());
+  return /\bpipe\b|duct|tube|tubing|conduit|spiral/.test(p.description.toLowerCase());
+}
+
+function isSpiral(p: Piece): boolean {
+  return /spiral/.test(p.description.toLowerCase());
 }
 
 function isRoofCurb(p: Piece): boolean {
@@ -87,10 +91,24 @@ function isBoxable(piece: Piece): boolean {
 }
 
 /**
- * How many pipes of this diameter can be stacked on top of each other.
- * Small pipe stacks higher; large pipe doesn't stack.
+ * Smart Stack toggle — when enabled (default), apply stacking rules:
+ *   - Spiral pipe/duct stacks up to 3 high regardless of diameter
+ *   - Pipes ≤6" stack 3, ≤12" stack 2, larger lay flat
+ *   - Roof curbs nest per max stack count, capped by trailer height
+ * When disabled, every loose piece lays flat (stack of 1).
+ * Threaded as a module-scoped flag set by the public entry points
+ * (recommend / evaluateManualSplit) to avoid a wide signature change.
  */
-function pipeStackCount(diameterIn: number): number {
+let SMART_STACK = true;
+
+/**
+ * How many pipes can be stacked on top of each other for a given piece.
+ * Smart Stack rules: spirals always 3-high; small pipe stacks higher;
+ * large pipe doesn't stack. Returns 1 when Smart Stack is disabled.
+ */
+function pipeStackCount(piece: Piece, diameterIn: number): number {
+  if (!SMART_STACK) return 1;
+  if (isSpiral(piece)) return 3;
   if (diameterIn <= 6) return 3;
   if (diameterIn <= 12) return 2;
   return 1;
@@ -273,7 +291,7 @@ function buildDeckItems(
     if (isBoxable(p) || isRoofCurb(p) || !isPipe(p)) continue;
     const d = effectiveDims(p);
     const diameter = Math.max(d.width, d.height);
-    const stack = pipeStackCount(diameter);
+    const stack = pipeStackCount(p, diameter);
     let remaining = p.qty;
     while (remaining > 0) {
       const inBundle = Math.min(stack, remaining);
@@ -543,7 +561,7 @@ function floorAreaIn2(
     const d = effectiveDims(p);
     if (isPipe(p)) {
       const diameter = Math.max(d.width, d.height);
-      const stack = pipeStackCount(diameter);
+      const stack = pipeStackCount(p, diameter);
       area += (withSeparation(d.length, d.width) * p.qty) / stack;
     } else {
       area += withSeparation(d.length, d.width) * p.qty;
@@ -592,6 +610,8 @@ const OPEN_DECK_IDS = [
 export interface RecommendOptions {
   /** User-selected maximum number of curbs in a single stack (legal height still wins). */
   maxCurbStack?: number;
+  /** When true (default), apply smart stacking rules (spirals 3-high, etc). When false, lay everything flat. */
+  smartStack?: boolean;
 }
 
 export const MANUAL_SPLIT_TRAILER_IDS = CANDIDATE_TRAILER_IDS;
@@ -634,6 +654,7 @@ export function evaluateManualSplit(
   configs: ManualTruckConfig[],
   options: RecommendOptions = {},
 ): ManualSplitEvaluation {
+  SMART_STACK = options.smartStack ?? true;
   const maxCurbStack = Math.max(1, options.maxCurbStack ?? Number.POSITIVE_INFINITY);
   const validAll = allPieces.filter((p) => p.qty > 0 && p.length > 0);
   const assigned = new Set<string>();
@@ -920,6 +941,7 @@ function splitTwoTrucks(
 
 
 export function recommend(pieces: Piece[], options: RecommendOptions = {}): Recommendation {
+  SMART_STACK = options.smartStack ?? true;
   const maxCurbStack = Math.max(1, options.maxCurbStack ?? Number.POSITIVE_INFINITY);
   const validPieces = pieces.filter((p) => p.qty > 0 && p.length > 0);
   const boxes = packBoxes(validPieces);
@@ -1074,7 +1096,11 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
     notes.push(`Total load weight: ${Math.round(totalWeightLb).toLocaleString()} lb.`);
   }
   notes.push(`Pieces separated by ${SEPARATION_IN}" strap/breathing room on the deck.`);
-  notes.push("Pipes ≤6\" stack 3 high, ≤12\" stack 2 high, larger lay flat.");
+  if (SMART_STACK) {
+    notes.push("Smart Stack on: spiral pipe/duct stacks up to 3 high; pipes ≤6\" stack 3 high, ≤12\" stack 2 high, larger lay flat.");
+  } else {
+    notes.push("Smart Stack off: every loose piece lays flat (no auto-stacking).");
+  }
 
   // Confidence: starts at 100, knocked down by problem signals.
   let confidence = 100;
