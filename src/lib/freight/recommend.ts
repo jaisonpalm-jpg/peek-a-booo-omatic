@@ -569,7 +569,11 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
   const boxes = packBoxes(validPieces);
 
   const totalPieces = validPieces.reduce((n, p) => n + p.qty, 0);
-  const totalCubeFt3 = validPieces.reduce((s, p) => s + cubeFt3(effectiveDims(p), p.qty), 0);
+  // Neoprene gaskets are an accessory — exclude their volume from the order total.
+  const totalCubeFt3 = validPieces.reduce(
+    (s, p) => (isNeopreneGasket(p) ? s : s + cubeFt3(effectiveDims(p), p.qty)),
+    0,
+  );
   const longestIn = validPieces.reduce((m, p) => Math.max(m, effectiveDims(p).length), 0);
   const widestIn = validPieces.reduce((m, p) => Math.max(m, effectiveDims(p).width), 0);
   const tallestIn = validPieces.reduce((m, p) => Math.max(m, effectiveDims(p).height), 0);
