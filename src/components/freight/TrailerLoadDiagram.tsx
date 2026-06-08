@@ -192,6 +192,8 @@ function TopDownView({ trailer, layout }: Props) {
         const showPos = w > 18 && h > 10;
         const showDims = w > 64 && h > 22;
         const showWeight = !!p.item.weightLb && w > 80 && h > 32;
+        const layers = p.item.units > 1 ? p.item.units : 0;
+        const insetMax = Math.min(w, h) * 0.18;
         return (
           <g key={i}>
             <rect
@@ -203,6 +205,24 @@ function TopDownView({ trailer, layout }: Props) {
               stroke={p.item.oversize ? "#f59e0b" : "rgba(0,0,0,0.4)"}
               strokeWidth={p.item.oversize ? 1.5 : 0.75}
             />
+            {/* Nested inset rectangles communicate stack depth from top-down. */}
+            {layers > 1 &&
+              Array.from({ length: Math.min(layers - 1, 3) }).map((_, k) => {
+                const inset = ((k + 1) / Math.min(layers, 4)) * insetMax;
+                return (
+                  <rect
+                    key={`ly-${k}`}
+                    x={x + inset}
+                    y={y + inset}
+                    width={Math.max(0, w - inset * 2)}
+                    height={Math.max(0, h - inset * 2)}
+                    fill="none"
+                    stroke="rgba(255,255,255,0.55)"
+                    strokeWidth={0.6}
+                    strokeDasharray="2 2"
+                  />
+                );
+              })}
             {showPos && (
               <text
                 x={x + 3}
@@ -214,6 +234,7 @@ function TopDownView({ trailer, layout }: Props) {
                 fontWeight={700}
               >
                 {p.posLabel}
+                {layers > 1 ? ` ×${layers}` : ""}
               </text>
             )}
             {showDims && (
@@ -364,6 +385,7 @@ function IsoView({ trailer, layout }: Props) {
             side={c.side}
             stroke={p.item.oversize ? "#f59e0b" : "rgba(0,0,0,0.5)"}
             label={p.posLabel}
+            layers={p.item.units > 1 ? p.item.units : 0}
           />
         );
       })}
@@ -372,7 +394,7 @@ function IsoView({ trailer, layout }: Props) {
 }
 
 function IsoBox({
-  x, y, z, l, w, h, P, top, front, side, stroke = "rgba(0,0,0,0.45)", label,
+  x, y, z, l, w, h, P, top, front, side, stroke = "rgba(0,0,0,0.45)", label, layers = 0,
 }: {
   x: number; y: number; z: number;
   l: number; w: number; h: number;
@@ -380,6 +402,8 @@ function IsoBox({
   top: string; front: string; side: string;
   stroke?: string;
   label?: string;
+  /** When > 1, draw that many horizontal dividers on the front + side faces. */
+  layers?: number;
 }) {
   const A = P(x, y, z);
   const B = P(x + l, y, z);
@@ -401,11 +425,43 @@ function IsoBox({
   const cx = (E.x + G.x) / 2;
   const cy = (E.y + G.y) / 2;
 
+  // Layer dividers: interpolate between bottom + top edges of each visible face.
+  const dividers: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
+  if (layers > 1) {
+    const lerp = (a: { x: number; y: number }, b: { x: number; y: number }, t: number) => ({
+      x: a.x + (b.x - a.x) * t,
+      y: a.y + (b.y - a.y) * t,
+    });
+    for (let k = 1; k < layers; k++) {
+      const t = k / layers;
+      // front face: D→H (left edge), C→G (right edge)
+      const p1 = lerp(D, H, t);
+      const p2 = lerp(C, G, t);
+      dividers.push({ x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y });
+      // side face: B→F (front edge), C→G (back edge — shared with front face)
+      const p3 = lerp(B, F, t);
+      const p4 = lerp(C, G, t);
+      dividers.push({ x1: p3.x, y1: p3.y, x2: p4.x, y2: p4.y });
+    }
+  }
+
   return (
     <g>
       <polygon points={pts(side4)} fill={side} stroke={stroke} strokeWidth={0.5} />
       <polygon points={pts(front4)} fill={front} stroke={stroke} strokeWidth={0.5} />
       <polygon points={pts(top4)} fill={top} stroke={stroke} strokeWidth={0.5} />
+      {dividers.map((d, di) => (
+        <line
+          key={di}
+          x1={d.x1}
+          y1={d.y1}
+          x2={d.x2}
+          y2={d.y2}
+          stroke="rgba(255,255,255,0.55)"
+          strokeWidth={0.6}
+          strokeDasharray="2 2"
+        />
+      ))}
       {label && (
         <text
           x={cx}
@@ -417,6 +473,7 @@ function IsoBox({
           fontWeight={700}
         >
           {label}
+          {layers > 1 ? ` ×${layers}` : ""}
         </text>
       )}
     </g>
