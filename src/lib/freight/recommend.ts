@@ -941,6 +941,7 @@ function splitTwoTrucks(
 
 
 export function recommend(pieces: Piece[], options: RecommendOptions = {}): Recommendation {
+  SMART_STACK = options.smartStack ?? true;
   const maxCurbStack = Math.max(1, options.maxCurbStack ?? Number.POSITIVE_INFINITY);
   const validPieces = pieces.filter((p) => p.qty > 0 && p.length > 0);
   const boxes = packBoxes(validPieces);
