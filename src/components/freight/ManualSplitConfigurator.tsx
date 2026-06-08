@@ -63,7 +63,7 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack 
 
   const evalResult = useMemo(
     () => evaluateManualSplit(validPieces, configs, { maxCurbStack, smartStack }),
-    [validPieces, configs, maxCurbStack],
+    [validPieces, configs, maxCurbStack, smartStack],
   );
 
   const pieceToTruck = useMemo(() => {
