@@ -255,6 +255,9 @@ function EstimatorPage() {
                 <RecommendationPanel rec={rec} />
               </section>
 
+              <ManualSplitConfigurator pieces={pieces} rec={rec} maxCurbStack={maxCurbStack} />
+
+
             </div>
           )}
         </main>
