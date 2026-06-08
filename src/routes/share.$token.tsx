@@ -64,7 +64,7 @@ function SharePage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b-2 border-rule bg-card">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 xl:px-10 py-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="size-9 bg-rule flex items-center justify-center shrink-0">
               <div className="size-3.5 bg-background" />
@@ -84,7 +84,7 @@ function SharePage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 xl:px-10 py-8 space-y-8">
         <section className="space-y-3">
           <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
             {data.name}
@@ -99,8 +99,8 @@ function SharePage() {
           </p>
         </section>
 
-        <div className="lg:grid lg:grid-cols-12 lg:gap-8 space-y-8 lg:space-y-0">
-          <section className="lg:col-span-7 space-y-4">
+        <div className="lg:grid lg:grid-cols-12 lg:gap-6 xl:gap-8 space-y-8 lg:space-y-0">
+          <section className="lg:col-span-7 xl:col-span-8 space-y-4">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
               Manifest · {pieces.length} line{pieces.length === 1 ? "" : "s"}
             </p>
@@ -132,7 +132,7 @@ function SharePage() {
               </table>
             </div>
           </section>
-          <aside className="lg:col-span-5 lg:sticky lg:top-8 lg:self-start">
+          <aside className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-8 lg:self-start">
             <RecommendationPanel rec={rec} />
           </aside>
         </div>

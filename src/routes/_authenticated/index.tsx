@@ -107,7 +107,7 @@ function EstimatorPage() {
     <div className="min-h-screen bg-background text-foreground">
       <div className="lg:pl-64">
         <header className="border-b-2 border-rule bg-card sticky top-0 z-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
+          <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 xl:px-10 py-3 sm:py-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <JobsSidebar
                 jobs={jobs}
@@ -168,7 +168,7 @@ function EstimatorPage() {
 
           {shareUrl && (
             <div className="border-t border-rule bg-secondary">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 flex items-center gap-3 text-xs">
+              <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 xl:px-10 py-2 flex items-center gap-3 text-xs">
                 <Link2 className="size-3.5 shrink-0" />
                 <span className="font-bold uppercase tracking-widest text-[10px]">
                   {copied ? "Copied" : "Share link"}
@@ -186,7 +186,7 @@ function EstimatorPage() {
           )}
         </header>
 
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 xl:px-10 py-6 sm:py-8">
           {!activeJob ? (
             <div className="py-24 text-center">
               <p className="text-sm text-muted-foreground mb-4">No job selected.</p>
@@ -199,8 +199,8 @@ function EstimatorPage() {
               </button>
             </div>
           ) : (
-            <div className="lg:grid lg:grid-cols-12 lg:gap-8 space-y-8 lg:space-y-0">
-              <section className="lg:col-span-7 space-y-6">
+            <div className="lg:grid lg:grid-cols-12 lg:gap-6 xl:gap-8 space-y-8 lg:space-y-0">
+              <section className="lg:col-span-7 xl:col-span-8 space-y-6">
                 <div className="space-y-3">
                   <div className="inline-flex items-center gap-2 bg-rule text-background px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em]">
                     Field Assessment
@@ -225,7 +225,7 @@ function EstimatorPage() {
                 <PieceTable pieces={pieces} onChange={setPieces} />
               </section>
 
-              <aside className="lg:col-span-5 lg:sticky lg:top-24 lg:self-start space-y-6">
+              <aside className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-24 lg:self-start space-y-6">
                 <div className="bg-card ring-2 ring-rule p-4 space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <label htmlFor="curb-stack" className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
@@ -254,7 +254,7 @@ function EstimatorPage() {
           )}
         </main>
 
-        <footer className="max-w-7xl mx-auto px-4 sm:px-6 py-8 border-t border-border mt-12 text-xs text-muted-foreground">
+        <footer className="max-w-screen-2xl mx-auto px-4 sm:px-6 xl:px-10 py-8 border-t border-border mt-12 text-xs text-muted-foreground">
           Federal limits: 8&apos;6&quot; width · 13&apos;6&quot; height · 53&apos; length · 4&apos; rear overhang.
           State permits may vary.
         </footer>
