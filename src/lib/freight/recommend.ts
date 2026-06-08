@@ -654,6 +654,7 @@ export function evaluateManualSplit(
   configs: ManualTruckConfig[],
   options: RecommendOptions = {},
 ): ManualSplitEvaluation {
+  SMART_STACK = options.smartStack ?? true;
   const maxCurbStack = Math.max(1, options.maxCurbStack ?? Number.POSITIVE_INFINITY);
   const validAll = allPieces.filter((p) => p.qty > 0 && p.length > 0);
   const assigned = new Set<string>();
