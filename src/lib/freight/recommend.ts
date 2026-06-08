@@ -1096,7 +1096,11 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
     notes.push(`Total load weight: ${Math.round(totalWeightLb).toLocaleString()} lb.`);
   }
   notes.push(`Pieces separated by ${SEPARATION_IN}" strap/breathing room on the deck.`);
-  notes.push("Pipes ≤6\" stack 3 high, ≤12\" stack 2 high, larger lay flat.");
+  if (SMART_STACK) {
+    notes.push("Smart Stack on: spiral pipe/duct stacks up to 3 high; pipes ≤6\" stack 3 high, ≤12\" stack 2 high, larger lay flat.");
+  } else {
+    notes.push("Smart Stack off: every loose piece lays flat (no auto-stacking).");
+  }
 
   // Confidence: starts at 100, knocked down by problem signals.
   let confidence = 100;
