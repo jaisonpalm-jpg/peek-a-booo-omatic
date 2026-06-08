@@ -38,7 +38,7 @@ function seedConfigs(rec: Recommendation): ManualTruckConfig[] {
   return [];
 }
 
-export function ManualSplitConfigurator({ pieces, rec, maxCurbStack }: Props) {
+export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack = true }: Props) {
   const validPieces = useMemo(
     () => pieces.filter((p) => p.qty > 0 && p.length > 0),
     [pieces],
