@@ -151,10 +151,23 @@ export interface CandidateBreakdown {
   scenarios: PackingScenario[];
 }
 
+export interface SplitTruck {
+  trailer: TrailerSpec;
+  pieceIds: string[];
+  /** Short human-readable label of what's on this truck. */
+  summary: string;
+  linearFt: number;
+  deckAreaPct: number;
+}
+
+export interface SplitShipment {
+  reason: string;
+  trucks: SplitTruck[];
+}
+
 export interface Recommendation {
   trailer: TrailerSpec | null;
   alternates: Array<{ trailer: TrailerSpec; utilizationPct: number }>;
-  /** Per-candidate breakdown for the 3 truck sizes, smallest first. */
   candidates: CandidateBreakdown[];
   totals: {
     pieces: number;
@@ -164,28 +177,21 @@ export interface Recommendation {
     longestIn: number;
     widestIn: number;
     tallestIn: number;
-    /** Estimated 36"x36"x24" boxes needed (includes gasket roll boxes). */
+    /** Estimated 36"x36"x24" packing boxes (excludes gasket accessory boxes). */
     boxes: number;
-    /** 48"x40" pallets used to ship neoprene gasket boxes (2 boxes per pallet). */
     gasketPallets: number;
-    /** Sum of all piece weights in pounds (0 when no weights provided). */
     weightLb: number;
-    /** True when any piece on the load is marked insulated/weather-sensitive. */
     insulated: boolean;
-    /** Linear feet the load would need if curbs were NOT stacked (stack = 1). */
     unstackedLinearFt: number;
-    /** Linear feet saved by the selected curb-stack setting. */
     savedLinearFt: number;
   };
-
-  /** 0–100 score indicating how confident the engine is in this pick. */
   confidence: number;
-  /** Natural-language explanation of why this trailer was chosen. */
   reason: string;
-  /** Percentage of selected trailer's deck floor area occupied by piece footprints. */
   deckAreaPct: number;
   oversize: OversizeFlag[];
   utilizationPct: number;
   withinLegalLimits: boolean;
   notes: string[];
+  /** When a single truck can't carry the order, suggest a multi-truck split. */
+  splitShipment?: SplitShipment;
 }

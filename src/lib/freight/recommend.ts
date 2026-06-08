@@ -563,13 +563,118 @@ export interface RecommendOptions {
   maxCurbStack?: number;
 }
 
+/** Find the smallest candidate trailer that fits a given subset of pieces. */
+function pickSmallestFitting(
+  pieces: Piece[],
+  maxCurbStack: number,
+  allowOpenDeck = true,
+): { trailer: TrailerSpec; linearFt: number; deckAreaPct: number } | null {
+  if (pieces.length === 0) return null;
+  const subBoxes = packBoxes(pieces);
+  const longest = longestPieceIn(pieces);
+  const widest = pieces.reduce((m, p) => Math.max(m, effectiveDims(p).width), 0);
+  const tallest = pieces.reduce((m, p) => Math.max(m, effectiveDims(p).height), 0);
+  const ids = allowOpenDeck ? CANDIDATE_TRAILER_IDS : CANDIDATE_TRAILER_IDS.filter((id) => !(OPEN_DECK_IDS as readonly string[]).includes(id));
+  const pool = TRAILERS.filter((t) => (ids as readonly string[]).includes(t.id))
+    .sort((a, b) => a.deckLength * a.deckWidth - b.deckLength * b.deckWidth);
+  for (const t of pool) {
+    if (widest > t.deckWidth || tallest > t.maxHeight) continue;
+    if (longest > t.deckLength + t.maxOverhang) continue;
+    const items = buildDeckItems(pieces, subBoxes, t.maxHeight, maxCurbStack);
+    const layout = packDeckLayout(items, t, "longest-first");
+    const needed = floorAreaIn2(pieces, subBoxes, t.maxHeight, maxCurbStack);
+    const linearIn = needed / t.deckWidth;
+    const deckAreaPct = Math.min(100, (needed / (t.deckLength * t.deckWidth)) * 100);
+    if (layout.fits && linearIn <= t.deckLength) {
+      return { trailer: t, linearFt: linearIn / 12, deckAreaPct };
+    }
+  }
+  return null;
+}
+
+/**
+ * Greedy split: assign largest pieces to truck 1 (try each trailer largest-first),
+ * spillover to truck 2. Returns null if even two trucks can't cover the load.
+ */
+function splitTwoTrucks(
+  pieces: Piece[],
+  maxCurbStack: number,
+): import("./types").SplitShipment | null {
+  if (pieces.length === 0) return null;
+  // Expand pieces into per-unit list, sorted longest first.
+  const ranked = [...pieces].sort((a, b) => {
+    const da = effectiveDims(a), db = effectiveDims(b);
+    return db.length * db.width - da.length * da.width;
+  });
+
+  // Try each open-deck trailer as the "primary" (carries the biggest stuff).
+  const primaries = TRAILERS.filter((t) => (OPEN_DECK_IDS as readonly string[]).includes(t.id))
+    .sort((a, b) => b.deckLength * b.deckWidth - a.deckLength * a.deckWidth);
+
+  for (const primary of primaries) {
+    const onPrimary: Piece[] = [];
+    const onSecondary: Piece[] = [];
+    for (const p of ranked) {
+      const trial = [...onPrimary, p];
+      const subBoxes = packBoxes(trial);
+      const items = buildDeckItems(trial, subBoxes, primary.maxHeight, maxCurbStack);
+      const layout = packDeckLayout(items, primary, "longest-first");
+      const needed = floorAreaIn2(trial, subBoxes, primary.maxHeight, maxCurbStack);
+      const linearIn = needed / primary.deckWidth;
+      const widest = trial.reduce((m, q) => Math.max(m, effectiveDims(q).width), 0);
+      const tallest = trial.reduce((m, q) => Math.max(m, effectiveDims(q).height), 0);
+      const fits =
+        layout.fits &&
+        linearIn <= primary.deckLength &&
+        widest <= primary.deckWidth &&
+        tallest <= primary.maxHeight;
+      if (fits) onPrimary.push(p);
+      else onSecondary.push(p);
+    }
+    if (onPrimary.length === 0 || onSecondary.length === 0) continue;
+    const secondPick = pickSmallestFitting(onSecondary, maxCurbStack);
+    if (!secondPick) continue;
+    const firstNeed = floorAreaIn2(onPrimary, packBoxes(onPrimary), primary.maxHeight, maxCurbStack);
+    const firstLinearFt = firstNeed / primary.deckWidth / 12;
+    const firstDeckPct = Math.min(100, (firstNeed / (primary.deckLength * primary.deckWidth)) * 100);
+
+    const sumPieces = (arr: Piece[]) => arr.reduce((n, p) => n + p.qty, 0);
+    return {
+      reason:
+        "Load exceeds the largest single trailer. Recommended split below — heaviest/longest freight on the primary, remainder on a secondary truck.",
+      trucks: [
+        {
+          trailer: primary,
+          pieceIds: onPrimary.map((p) => p.id),
+          summary: `${sumPieces(onPrimary)} piece${sumPieces(onPrimary) === 1 ? "" : "s"} (longest / largest)`,
+          linearFt: firstLinearFt,
+          deckAreaPct: firstDeckPct,
+        },
+        {
+          trailer: secondPick.trailer,
+          pieceIds: onSecondary.map((p) => p.id),
+          summary: `${sumPieces(onSecondary)} piece${sumPieces(onSecondary) === 1 ? "" : "s"} (remaining freight)`,
+          linearFt: secondPick.linearFt,
+          deckAreaPct: secondPick.deckAreaPct,
+        },
+      ],
+    };
+  }
+  return null;
+}
+
+
 export function recommend(pieces: Piece[], options: RecommendOptions = {}): Recommendation {
   const maxCurbStack = Math.max(1, options.maxCurbStack ?? Number.POSITIVE_INFINITY);
   const validPieces = pieces.filter((p) => p.qty > 0 && p.length > 0);
   const boxes = packBoxes(validPieces);
 
   const totalPieces = validPieces.reduce((n, p) => n + p.qty, 0);
-  const totalCubeFt3 = validPieces.reduce((s, p) => s + cubeFt3(effectiveDims(p), p.qty), 0);
+  // Neoprene gaskets are an accessory — exclude their volume from the order total.
+  const totalCubeFt3 = validPieces.reduce(
+    (s, p) => (isNeopreneGasket(p) ? s : s + cubeFt3(effectiveDims(p), p.qty)),
+    0,
+  );
   const longestIn = validPieces.reduce((m, p) => Math.max(m, effectiveDims(p).length), 0);
   const widestIn = validPieces.reduce((m, p) => Math.max(m, effectiveDims(p).width), 0);
   const tallestIn = validPieces.reduce((m, p) => Math.max(m, effectiveDims(p).height), 0);
@@ -651,7 +756,7 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
     longestIn,
     widestIn,
     tallestIn,
-    boxes: boxes.total,
+    boxes: boxes.fillerBoxes,
     gasketPallets: boxes.gasketPallets,
     weightLb: totalWeightLb,
     insulated,
@@ -672,8 +777,17 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
   const notes: string[] = [];
   if (validPieces.length === 0) {
     notes.push("Add at least one piece to see a recommendation.");
-  } else if (!best) {
-    notes.push("Load exceeds the 53' dry van — split shipment or use a flatbed.");
+  }
+  const splitShipment = !best ? splitTwoTrucks(validPieces, maxCurbStack) ?? undefined : undefined;
+  if (!best && validPieces.length > 0) {
+    if (splitShipment) {
+      const [a, b] = splitShipment.trucks;
+      notes.push(
+        `Order too large for one truck — recommend splitting across 2 trucks: ${a.trailer.name} + ${b.trailer.name}.`,
+      );
+    } else {
+      notes.push("Load exceeds the largest standard equipment, even split across two trucks — specialized transport required.");
+    }
   }
   if (boxes.fillerBoxes > 0) {
     notes.push(`${boxes.fillerBoxes} packing box${boxes.fillerBoxes === 1 ? "" : "es"} (36"x36"x24") estimated, stacked 2 high.`);
@@ -768,6 +882,7 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
     notes,
     confidence,
     reason,
+    splitShipment,
   };
 }
 

@@ -191,6 +191,46 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
         </div>
       </div>
 
+      {rec.splitShipment && (
+        <div className="bg-card ring-2 ring-warning/60 overflow-hidden">
+          <div className="p-4 bg-warning-soft border-b-2 border-warning/40">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="size-4 text-warning" />
+              <p className="text-[10px] font-bold uppercase tracking-widest">
+                Split shipment recommended
+              </p>
+            </div>
+            <p className="text-xs text-foreground/80 mt-1.5 leading-snug">
+              {rec.splitShipment.reason}
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-border">
+            {rec.splitShipment.trucks.map((tr, i) => (
+              <div key={i} className="bg-card p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Truck {i + 1}
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <Truck className="size-5 text-foreground" />
+                  <p className="text-lg font-semibold">{tr.trailer.name}</p>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">{tr.trailer.description}</p>
+                <div className="mt-3 space-y-1 font-mono text-[11px]">
+                  <div>
+                    Carries <span className="font-bold text-foreground">{tr.summary}</span>
+                  </div>
+                  <div>
+                    Deck used{" "}
+                    <span className="font-bold text-foreground">{tr.linearFt.toFixed(1)} ft</span> ·{" "}
+                    {Math.round(tr.deckAreaPct)}% area
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {notes.length > 0 && (
         <ul className="space-y-2">
           {notes.map((n, i) => (
