@@ -245,8 +245,9 @@ function buildDeckItems(
   boxes: BoxBreakdown,
   maxHeightIn: number,
   maxCurbStack: number,
-  extraGasketPallets = 0,
+  _extraGasketPallets = 0,
 ): DeckItem[] {
+
   const items: DeckItem[] = [];
 
   // Curb stacks
@@ -322,33 +323,11 @@ function buildDeckItems(
     });
   }
 
-  // Gasket pallets — required + any "extra" capacity pallets
-  const gasketWeightTotal = pieces
-    .filter(isNeopreneGasket)
-    .reduce((s, p) => s + (p.weight ?? 0) * p.qty, 0);
-  const wPerPallet =
-    boxes.gasketPallets > 0 ? gasketWeightTotal / boxes.gasketPallets : 0;
-  for (let i = 0; i < boxes.gasketPallets; i++) {
-    items.push({
-      kind: "gasket-pallet",
-      label: `Gasket pallet`,
-      lengthIn: PALLET_L,
-      widthIn: PALLET_W,
-      heightIn: GASKET_PALLET_HEIGHT_IN,
-      units: BOXES_PER_PALLET,
-      weightLb: wPerPallet > 0 ? wPerPallet : undefined,
-    });
-  }
-  for (let i = 0; i < extraGasketPallets; i++) {
-    items.push({
-      kind: "gasket-pallet",
-      label: `Extra gasket pallet`,
-      lengthIn: PALLET_L,
-      widthIn: PALLET_W,
-      heightIn: GASKET_PALLET_HEIGHT_IN,
-      units: BOXES_PER_PALLET,
-    });
-  }
+  // Gasket pallets are an ACCESSORY — they ship alongside but do not drive
+  // trailer length sizing. Intentionally omitted from the deck layout so
+  // they don't inflate linear-ft or overhang figures.
+
+
 
   return items;
 }
@@ -544,9 +523,10 @@ function floorAreaIn2(
     const side = Math.sqrt(s.footprint);
     area += withSeparation(side, side);
   }
-  // Filler boxes ride loose, stacked 2 high. Gasket boxes ride on 48x40 pallets.
+  // Filler boxes ride loose, stacked 2 high. Gasket pallets are accessory
+  // freight and excluded from order length sizing.
   area += (boxes.fillerBoxes * BOX_FOOTPRINT_IN2) / BOX_STACK;
-  area += boxes.gasketPallets * PALLET_FOOTPRINT_IN2;
+
   return area;
 }
 
@@ -700,9 +680,10 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
   }
   if (boxes.gasketBoxes > 0) {
     notes.push(
-      `${boxes.gasketBoxes} neoprene gasket roll box${boxes.gasketBoxes === 1 ? "" : "es"} (up to ${GASKET_ROLLS_PER_BOX} 25ft rolls per 36"x36"x24" box) palletized on ${boxes.gasketPallets} 48"x40" pallet${boxes.gasketPallets === 1 ? "" : "s"} (4 boxes/pallet).`,
+      `${boxes.gasketBoxes} neoprene gasket roll box${boxes.gasketBoxes === 1 ? "" : "es"} (up to ${GASKET_ROLLS_PER_BOX} 25ft rolls per 36"x36"x24" box) palletized on ${boxes.gasketPallets} 48"x40" pallet${boxes.gasketPallets === 1 ? "" : "s"} (4 boxes/pallet) — accessory freight, not counted in order length.`,
     );
   }
+
   const curbStacks = best?.curbStacks ?? candidates.at(-1)?.curbStacks ?? [];
   const totalCurbs = curbStacks.reduce((n, s) => n + s.count, 0);
   if (totalCurbs > 0) {
