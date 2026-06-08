@@ -64,7 +64,7 @@ function SharePage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b-2 border-rule bg-card">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 xl:px-10 py-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="size-9 bg-rule flex items-center justify-center shrink-0">
               <div className="size-3.5 bg-background" />
@@ -84,7 +84,7 @@ function SharePage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 xl:px-10 py-8 space-y-8">
         <section className="space-y-3">
           <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
             {data.name}
