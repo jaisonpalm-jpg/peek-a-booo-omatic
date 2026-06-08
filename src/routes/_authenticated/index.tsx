@@ -199,8 +199,8 @@ function EstimatorPage() {
               </button>
             </div>
           ) : (
-            <div className="lg:grid lg:grid-cols-12 lg:gap-8 space-y-8 lg:space-y-0">
-              <section className="lg:col-span-7 space-y-6">
+            <div className="lg:grid lg:grid-cols-12 lg:gap-6 xl:gap-8 space-y-8 lg:space-y-0">
+              <section className="lg:col-span-7 xl:col-span-8 space-y-6">
                 <div className="space-y-3">
                   <div className="inline-flex items-center gap-2 bg-rule text-background px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em]">
                     Field Assessment
