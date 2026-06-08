@@ -99,8 +99,8 @@ function SharePage() {
           </p>
         </section>
 
-        <div className="lg:grid lg:grid-cols-12 lg:gap-8 space-y-8 lg:space-y-0">
-          <section className="lg:col-span-7 space-y-4">
+        <div className="lg:grid lg:grid-cols-12 lg:gap-6 xl:gap-8 space-y-8 lg:space-y-0">
+          <section className="lg:col-span-7 xl:col-span-8 space-y-4">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
               Manifest · {pieces.length} line{pieces.length === 1 ? "" : "s"}
             </p>
