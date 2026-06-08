@@ -777,6 +777,7 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
   const notes: string[] = [];
   if (validPieces.length === 0) {
     notes.push("Add at least one piece to see a recommendation.");
+  }
   const splitShipment = !best ? splitTwoTrucks(validPieces, maxCurbStack) ?? undefined : undefined;
   if (!best && validPieces.length > 0) {
     if (splitShipment) {
