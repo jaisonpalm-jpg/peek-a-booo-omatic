@@ -6,6 +6,7 @@ import { PieceTable } from "@/components/freight/PieceTable";
 import { RecommendationPanel } from "@/components/freight/RecommendationPanel";
 import { ScanSheetButton } from "@/components/freight/ScanSheetButton";
 import { JobsSidebar } from "@/components/freight/JobsSidebar";
+import { ManualSplitConfigurator } from "@/components/freight/ManualSplitConfigurator";
 
 import { recommend } from "@/lib/freight/recommend";
 import { exportLoadSummaryPdf } from "@/lib/freight/exportPdf";
@@ -253,6 +254,9 @@ function EstimatorPage() {
                 </div>
                 <RecommendationPanel rec={rec} />
               </section>
+
+              <ManualSplitConfigurator pieces={pieces} rec={rec} maxCurbStack={maxCurbStack} />
+
 
             </div>
           )}

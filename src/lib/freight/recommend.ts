@@ -8,6 +8,7 @@ import type {
   OversizeFlag,
   Piece,
   Recommendation,
+  TrailerId,
   TrailerSpec,
 } from "./types";
 
@@ -591,6 +592,219 @@ const OPEN_DECK_IDS = [
 export interface RecommendOptions {
   /** User-selected maximum number of curbs in a single stack (legal height still wins). */
   maxCurbStack?: number;
+}
+
+export const MANUAL_SPLIT_TRAILER_IDS = CANDIDATE_TRAILER_IDS;
+
+export interface ManualTruckConfig {
+  trailerId: TrailerId;
+  pieceIds: string[];
+}
+
+export interface ManualTruckEvaluation {
+  trailer: TrailerSpec;
+  pieceIds: string[];
+  fits: boolean;
+  layout: DeckLayout;
+  linearFt: number;
+  deckAreaPct: number;
+  utilizationPct: number;
+  oversize: OversizeFlag[];
+  issues: string[];
+  summary: string;
+  curbStacks: CurbStackView[];
+}
+
+export interface ManualSplitEvaluation {
+  trucks: ManualTruckEvaluation[];
+  unassignedPieceIds: string[];
+  confidence: number;
+  reason: string;
+  totalLinearFt: number;
+  allFit: boolean;
+}
+
+/**
+ * Evaluate a manually configured multi-truck assignment. Confidence
+ * auto-adjusts based on per-truck fit, utilization, oversize flags,
+ * empty trucks, and unassigned pieces.
+ */
+export function evaluateManualSplit(
+  allPieces: Piece[],
+  configs: ManualTruckConfig[],
+  options: RecommendOptions = {},
+): ManualSplitEvaluation {
+  const maxCurbStack = Math.max(1, options.maxCurbStack ?? Number.POSITIVE_INFINITY);
+  const validAll = allPieces.filter((p) => p.qty > 0 && p.length > 0);
+  const assigned = new Set<string>();
+  for (const c of configs) for (const id of c.pieceIds) assigned.add(id);
+  const unassignedPieceIds = validAll.filter((p) => !assigned.has(p.id)).map((p) => p.id);
+  const byId = new Map(validAll.map((p) => [p.id, p] as const));
+
+  const trucks: ManualTruckEvaluation[] = configs.map((cfg) => {
+    const trailer = TRAILERS.find((t) => t.id === cfg.trailerId) ?? TRAILERS[0];
+    const pieces = cfg.pieceIds
+      .map((id) => byId.get(id))
+      .filter((p): p is Piece => !!p);
+    const issues: string[] = [];
+
+    if (pieces.length === 0) {
+      const emptyLayout: DeckLayout = {
+        placements: [],
+        usedLengthIn: 0,
+        fits: true,
+        totalOverhangIn: 0,
+        placedCount: 0,
+        unplacedCount: 0,
+        weightLb: 0,
+      };
+      issues.push("Truck has no pieces assigned.");
+      return {
+        trailer,
+        pieceIds: [],
+        fits: true,
+        layout: emptyLayout,
+        linearFt: 0,
+        deckAreaPct: 0,
+        utilizationPct: 0,
+        oversize: [],
+        issues,
+        summary: "Empty",
+        curbStacks: [],
+      };
+    }
+
+    const subBoxes = packBoxes(pieces);
+    const items = buildDeckItems(pieces, subBoxes, trailer.maxHeight, maxCurbStack);
+    const layout = packDeckLayout(items, trailer, "longest-first");
+    const needed = floorAreaIn2(pieces, subBoxes, trailer.maxHeight, maxCurbStack);
+    const linearIn = needed / trailer.deckWidth;
+    const longest = longestPieceIn(pieces);
+    const widestNonCurb = pieces.reduce(
+      (m, p) => (isRoofCurb(p) ? m : Math.max(m, effectiveDims(p).width)),
+      0,
+    );
+    const tallest = pieces.reduce((m, p) => Math.max(m, effectiveDims(p).height), 0);
+
+    const fitsLength =
+      longest <= trailer.deckLength + trailer.maxOverhang && linearIn <= trailer.deckLength;
+    const fitsWidth = widestNonCurb <= trailer.deckWidth;
+    const fitsHeight = tallest <= trailer.maxHeight;
+    const fits = fitsLength && fitsWidth && fitsHeight && layout.fits;
+
+    if (!fitsLength)
+      issues.push(
+        `Load length ${(linearIn / 12).toFixed(1)} ft exceeds ${(trailer.deckLength / 12).toFixed(0)} ft deck.`,
+      );
+    if (!fitsWidth)
+      issues.push(
+        `Widest piece ${(widestNonCurb / 12).toFixed(1)} ft exceeds ${(trailer.deckWidth / 12).toFixed(1)} ft deck width.`,
+      );
+    if (!fitsHeight)
+      issues.push(
+        `Tallest piece ${(tallest / 12).toFixed(1)} ft exceeds ${(trailer.maxHeight / 12).toFixed(1)} ft max height.`,
+      );
+    if (!layout.fits && fitsLength && fitsWidth && fitsHeight) {
+      issues.push(
+        `Packer could not place ${layout.unplacedCount} item${layout.unplacedCount === 1 ? "" : "s"} — try rebalancing.`,
+      );
+    }
+
+    const oversize = pieces.flatMap(flagsForPiece);
+    const utilizationPct =
+      trailer.deckLength > 0 ? Math.min(100, (linearIn / trailer.deckLength) * 100) : 0;
+    const deckArea = trailer.deckLength * trailer.deckWidth;
+    const deckAreaPct = deckArea > 0 ? Math.min(100, (needed / deckArea) * 100) : 0;
+    const totalQty = pieces.reduce((n, p) => n + p.qty, 0);
+    const summary = `${totalQty} piece${totalQty === 1 ? "" : "s"}`;
+    const curbStacks = toCurbStackViews(
+      stackCurbs(expandCurbs(pieces), trailer.maxHeight, maxCurbStack),
+    );
+
+    return {
+      trailer,
+      pieceIds: pieces.map((p) => p.id),
+      fits,
+      layout,
+      linearFt: linearIn / 12,
+      deckAreaPct,
+      utilizationPct,
+      oversize,
+      issues,
+      summary,
+      curbStacks,
+    };
+  });
+
+  let confidence = 100;
+  const reasonBits: string[] = [];
+
+  if (validAll.length === 0) {
+    confidence = 0;
+  } else {
+    if (unassignedPieceIds.length > 0) {
+      const pct = unassignedPieceIds.length / validAll.length;
+      const penalty = Math.min(60, Math.round(pct * 80));
+      confidence -= penalty;
+      reasonBits.push(
+        `${unassignedPieceIds.length} unassigned piece${unassignedPieceIds.length === 1 ? "" : "s"}`,
+      );
+    }
+    const nonEmpty = trucks.filter((t) => t.pieceIds.length > 0);
+    const empty = trucks.length - nonEmpty.length;
+    if (empty > 0) {
+      confidence -= empty * 5;
+      reasonBits.push(`${empty} empty truck${empty === 1 ? "" : "s"}`);
+    }
+    const dontFit = trucks.filter((t) => t.pieceIds.length > 0 && !t.fits);
+    if (dontFit.length > 0) {
+      confidence -= Math.min(40, dontFit.length * 25);
+      reasonBits.push(
+        `${dontFit.length} truck${dontFit.length === 1 ? "" : "s"} over capacity`,
+      );
+    }
+    const totalOversize = trucks.reduce((n, t) => n + t.oversize.length, 0);
+    if (totalOversize > 0) {
+      confidence -= Math.min(20, totalOversize * 5);
+      reasonBits.push(`${totalOversize} oversize flag${totalOversize === 1 ? "" : "s"}`);
+    }
+    const underused = nonEmpty.filter((t) => t.deckAreaPct < 25).length;
+    if (underused > 0 && nonEmpty.length > 1) {
+      confidence -= underused * 8;
+      reasonBits.push(
+        `${underused} truck${underused === 1 ? "" : "s"} under 25% utilized — consider consolidating`,
+      );
+    }
+    if (nonEmpty.length > 0 && dontFit.length === 0 && unassignedPieceIds.length === 0) {
+      const avgUtil =
+        nonEmpty.reduce((s, t) => s + t.deckAreaPct, 0) / nonEmpty.length;
+      if (avgUtil < 40) confidence -= 5;
+    }
+  }
+  confidence = Math.max(0, Math.min(100, confidence));
+
+  const allFit =
+    unassignedPieceIds.length === 0 &&
+    trucks.every((t) => t.pieceIds.length === 0 || t.fits);
+
+  let reason: string;
+  if (validAll.length === 0) {
+    reason = "Add pieces to configure a manual split.";
+  } else if (trucks.length === 0) {
+    reason = "Add at least one truck to begin manual configuration.";
+  } else if (allFit) {
+    const nonEmpty = trucks.filter((t) => t.pieceIds.length > 0);
+    const avgUtil =
+      nonEmpty.reduce((s, t) => s + t.deckAreaPct, 0) / Math.max(1, nonEmpty.length);
+    reason = `All pieces assigned across ${trucks.length} truck${trucks.length === 1 ? "" : "s"}, avg ${Math.round(avgUtil)}% deck area used.`;
+    if (reasonBits.length > 0) reason += ` Notes: ${reasonBits.join("; ")}.`;
+  } else {
+    reason = `Configuration needs attention: ${reasonBits.join("; ")}.`;
+  }
+
+  const totalLinearFt = trucks.reduce((s, t) => s + t.linearFt, 0);
+
+  return { trucks, unassignedPieceIds, confidence, reason, totalLinearFt, allFit };
 }
 
 /** Find the smallest candidate trailer that fits a given subset of pieces. */
