@@ -32,11 +32,7 @@ function cubeFt3(dims: EffectiveDims, qty: number): number {
 function flagsForPiece(piece: Piece): OversizeFlag[] {
   const d = effectiveDims(piece);
   const out: OversizeFlag[] = [];
-  // Curb adapters are an accepted exception for width — they routinely run
-  // wider than 8'6" and are handled as standard roof-curb freight, not as a
-  // permitted oversize load. Skip the width flag for them.
-  const curbException = isRoofCurb(piece);
-  if (d.width > FEDERAL_LIMITS.maxWidthIn && !curbException) {
+  if (d.width > FEDERAL_LIMITS.maxWidthIn) {
     out.push({ pieceId: piece.id, reason: "width", detail: `Width ${(d.width / 12).toFixed(1)}' exceeds 8'6" legal limit.` });
   }
   if (d.height > FEDERAL_LIMITS.maxHeightIn) {
