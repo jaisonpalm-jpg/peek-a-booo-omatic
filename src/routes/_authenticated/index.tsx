@@ -199,11 +199,11 @@ function EstimatorPage() {
               </button>
             </div>
           ) : (
-            <div className="lg:grid lg:grid-cols-12 lg:gap-6 xl:gap-8 space-y-8 lg:space-y-0">
-              <section className="lg:col-span-7 xl:col-span-8 space-y-6">
+            <div className="space-y-8">
+              <section className="space-y-6">
                 <div className="space-y-3">
                   <div className="inline-flex items-center gap-2 bg-rule text-background px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em]">
-                    Field Assessment
+                    Row 1 · Manifest / BOL
                   </div>
                   <input
                     value={jobName}
@@ -225,7 +225,10 @@ function EstimatorPage() {
                 <PieceTable pieces={pieces} onChange={setPieces} />
               </section>
 
-              <aside className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-24 lg:self-start space-y-6">
+              <section className="space-y-6">
+                <div className="inline-flex items-center gap-2 bg-rule text-background px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em]">
+                  Row 2 · Recommendation
+                </div>
                 <div className="bg-card ring-2 ring-rule p-4 space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <label htmlFor="curb-stack" className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
