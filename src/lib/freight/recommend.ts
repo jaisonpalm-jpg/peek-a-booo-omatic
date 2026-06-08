@@ -610,6 +610,8 @@ const OPEN_DECK_IDS = [
 export interface RecommendOptions {
   /** User-selected maximum number of curbs in a single stack (legal height still wins). */
   maxCurbStack?: number;
+  /** When true (default), apply smart stacking rules (spirals 3-high, etc). When false, lay everything flat. */
+  smartStack?: boolean;
 }
 
 export const MANUAL_SPLIT_TRAILER_IDS = CANDIDATE_TRAILER_IDS;
