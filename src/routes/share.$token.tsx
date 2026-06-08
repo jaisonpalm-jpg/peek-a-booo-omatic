@@ -99,43 +99,45 @@ function SharePage() {
           </p>
         </section>
 
-        <div className="lg:grid lg:grid-cols-12 lg:gap-6 xl:gap-8 space-y-8 lg:space-y-0">
-          <section className="lg:col-span-7 xl:col-span-8 space-y-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-              Manifest · {pieces.length} line{pieces.length === 1 ? "" : "s"}
-            </p>
-            <div className="bg-card ring-2 ring-rule overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead className="bg-secondary">
-                  <tr className="text-left">
-                    <th className="px-3 py-2 font-bold uppercase tracking-widest text-[10px]">#</th>
-                    <th className="px-3 py-2 font-bold uppercase tracking-widest text-[10px]">Description</th>
-                    <th className="px-3 py-2 font-bold uppercase tracking-widest text-[10px]">L×W×H (in)</th>
-                    <th className="px-3 py-2 font-bold uppercase tracking-widest text-[10px] text-right">Qty</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pieces.map((p, i) => {
-                    const d = effectiveDims(p);
-                    return (
-                      <tr key={p.id} className="border-t border-border">
-                        <td className="px-3 py-2 font-mono">{i + 1}</td>
-                        <td className="px-3 py-2">{p.description || "—"}</td>
-                        <td className="px-3 py-2 font-mono">
-                          {d.length} × {d.width} × {d.height}
-                        </td>
-                        <td className="px-3 py-2 text-right font-mono">{p.qty}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </section>
-          <aside className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-8 lg:self-start">
-            <RecommendationPanel rec={rec} />
-          </aside>
-        </div>
+        <section className="space-y-4">
+          <div className="inline-flex items-center gap-2 bg-rule text-background px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em]">
+            Row 1 · Manifest · {pieces.length} line{pieces.length === 1 ? "" : "s"}
+          </div>
+          <div className="bg-card ring-2 ring-rule overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="bg-secondary">
+                <tr className="text-left">
+                  <th className="px-3 py-2 font-bold uppercase tracking-widest text-[10px]">#</th>
+                  <th className="px-3 py-2 font-bold uppercase tracking-widest text-[10px]">Description</th>
+                  <th className="px-3 py-2 font-bold uppercase tracking-widest text-[10px]">L×W×H (in)</th>
+                  <th className="px-3 py-2 font-bold uppercase tracking-widest text-[10px] text-right">Qty</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pieces.map((p, i) => {
+                  const d = effectiveDims(p);
+                  return (
+                    <tr key={p.id} className="border-t border-border">
+                      <td className="px-3 py-2 font-mono">{i + 1}</td>
+                      <td className="px-3 py-2">{p.description || "—"}</td>
+                      <td className="px-3 py-2 font-mono">
+                        {d.length} × {d.width} × {d.height}
+                      </td>
+                      <td className="px-3 py-2 text-right font-mono">{p.qty}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <div className="inline-flex items-center gap-2 bg-rule text-background px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em]">
+            Row 2 · Recommendation
+          </div>
+          <RecommendationPanel rec={rec} />
+        </section>
 
         <footer className="border-t border-border pt-6 text-xs text-muted-foreground">
           Federal limits: 8&apos;6&quot; width · 13&apos;6&quot; height · 53&apos; length · 4&apos;
