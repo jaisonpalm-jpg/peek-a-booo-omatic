@@ -132,7 +132,7 @@ function SharePage() {
               </table>
             </div>
           </section>
-          <aside className="lg:col-span-5 lg:sticky lg:top-8 lg:self-start">
+          <aside className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-8 lg:self-start">
             <RecommendationPanel rec={rec} />
           </aside>
         </div>
