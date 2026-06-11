@@ -44,8 +44,22 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack 
     [pieces],
   );
 
-  const [enabled, setEnabled] = useState(false);
+  const [enabled, setEnabled] = useState<boolean>(() => !!rec.splitShipment);
   const [configs, setConfigs] = useState<ManualTruckConfig[]>(() => seedConfigs(rec));
+
+  // Auto-enable + seed when the recommendation flips to a multi-truck split.
+  const splitKey = rec.splitShipment
+    ? rec.splitShipment.trucks.map((t) => `${t.trailer.id}:${t.pieceIds.join(",")}`).join("|")
+    : "";
+  useEffect(() => {
+    if (!rec.splitShipment) return;
+    setEnabled(true);
+    setConfigs((prev) => {
+      const allEmpty = prev.length === 0 || prev.every((c) => c.pieceIds.length === 0);
+      if (allEmpty) return seedConfigs(rec);
+      return prev;
+    });
+  }, [splitKey, rec]);
 
   // Drop pieces from configs when removed from the manifest.
   useEffect(() => {
@@ -72,14 +86,59 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack 
     return m;
   }, [configs]);
 
+  /**
+   * Assign a piece to a truck. If the assignment causes the target truck
+   * to overflow, automatically peel the largest OTHER pieces off that
+   * truck onto the next available truck (creating a new one if needed)
+   * until the just-assigned piece fits.
+   */
   function assign(pieceId: string, truckIdx: number | -1) {
-    setConfigs((prev) =>
-      prev.map((c, i) => {
-        const without = c.pieceIds.filter((id) => id !== pieceId);
-        if (i === truckIdx) return { ...c, pieceIds: [...without, pieceId] };
-        return { ...c, pieceIds: without };
-      }),
-    );
+    setConfigs((prev) => {
+      // Strip the piece from every truck first.
+      let next: ManualTruckConfig[] = prev.map((c) => ({
+        ...c,
+        pieceIds: c.pieceIds.filter((id) => id !== pieceId),
+      }));
+      if (truckIdx === -1) return next;
+      if (truckIdx < 0 || truckIdx >= next.length) return next;
+      next = next.map((c, i) =>
+        i === truckIdx ? { ...c, pieceIds: [...c.pieceIds, pieceId] } : c,
+      );
+
+      const piecesById = new Map(validPieces.map((p) => [p.id, p]));
+      // Safety cap to prevent infinite loop on pathological inputs.
+      for (let guard = 0; guard < 50; guard++) {
+        const ev = evaluateManualSplit(validPieces, next, { maxCurbStack, smartStack });
+        const t = ev.trucks[truckIdx];
+        if (!t || t.fits) break;
+
+        // Find the largest piece on this truck OTHER than the one just
+        // assigned — moving the biggest frees the most space fastest.
+        const movable = next[truckIdx].pieceIds.filter((id) => id !== pieceId);
+        if (movable.length === 0) break;
+        movable.sort((a, b) => {
+          const pa = piecesById.get(a);
+          const pb = piecesById.get(b);
+          const fa = pa ? pa.length * pa.width : 0;
+          const fb = pb ? pb.length * pb.width : 0;
+          return fb - fa;
+        });
+        const moveId = movable[0];
+
+        // Pick the next truck (any other truck), or create one.
+        let targetIdx = next.findIndex((_, i) => i !== truckIdx);
+        if (targetIdx === -1) {
+          next = [...next, { trailerId: defaultTrailerId(rec), pieceIds: [] }];
+          targetIdx = next.length - 1;
+        }
+        next = next.map((c, i) => {
+          if (i === truckIdx) return { ...c, pieceIds: c.pieceIds.filter((id) => id !== moveId) };
+          if (i === targetIdx) return { ...c, pieceIds: [...c.pieceIds, moveId] };
+          return c;
+        });
+      }
+      return next;
+    });
   }
 
   function addTruck() {
