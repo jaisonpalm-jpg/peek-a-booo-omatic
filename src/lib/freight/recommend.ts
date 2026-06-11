@@ -599,12 +599,16 @@ const CANDIDATE_TRAILER_IDS = [
   "hotshot-40",
   "flatbed-48",
   "conestoga-48",
+  "stepdeck-53",
+  "rgn-53",
 ] as const;
 
 const OPEN_DECK_IDS = [
   "hotshot-40",
   "flatbed-48",
   "conestoga-48",
+  "stepdeck-53",
+  "rgn-53",
 ] as const;
 
 export interface RecommendOptions {
