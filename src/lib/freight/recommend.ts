@@ -180,6 +180,31 @@ function expandCurbs(pieces: Piece[]): CurbInstance[] {
   return out;
 }
 
+/**
+ * Non-pipe, non-curb, non-boxable pieces (raw L×W×H blocks from Quick Add).
+ * When Smart Stack is on, these are eligible to stack like curbs up to legal
+ * height. When off, returns empty so each unit is placed flat by the loose
+ * loop in buildDeckItems.
+ */
+function expandStackableBlocks(pieces: Piece[]): CurbInstance[] {
+  if (!SMART_STACK) return [];
+  const out: CurbInstance[] = [];
+  for (const p of pieces) {
+    if (isBoxable(p) || isRoofCurb(p) || isPipe(p)) continue;
+    const d = effectiveDims(p);
+    for (let i = 0; i < p.qty; i++) {
+      out.push({
+        piece: p,
+        length: d.length,
+        width: d.width,
+        height: d.height,
+        footprint: d.length * d.width,
+      });
+    }
+  }
+  return out;
+}
+
 interface CurbStack {
   /** Footprint inches² consumed on the deck (largest piece in the stack). */
   footprint: number;
