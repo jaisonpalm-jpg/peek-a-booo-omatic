@@ -7,6 +7,9 @@ import { RecommendationPanel } from "@/components/freight/RecommendationPanel";
 import { ScanSheetButton } from "@/components/freight/ScanSheetButton";
 import { JobsSidebar } from "@/components/freight/JobsSidebar";
 import { ManualSplitConfigurator } from "@/components/freight/ManualSplitConfigurator";
+import { QuickAddPieces } from "@/components/freight/QuickAddPieces";
+import { Link } from "@tanstack/react-router";
+import { Zap } from "lucide-react";
 
 import { recommend } from "@/lib/freight/recommend";
 import { exportLoadSummaryPdf } from "@/lib/freight/exportPdf";
@@ -135,6 +138,14 @@ function EstimatorPage() {
             </div>
 
             <div className="flex items-center gap-2">
+              <Link
+                to="/quick"
+                className="inline-flex items-center gap-2 text-xs font-bold py-2.5 px-4 bg-background ring-2 ring-rule uppercase tracking-widest hover:bg-secondary transition-colors"
+                title="Standalone raw-dimension estimator"
+              >
+                <Zap className="size-3.5" />
+                <span className="hidden sm:inline">Quick</span>
+              </Link>
               <button
                 type="button"
                 onClick={handleShare}
@@ -225,6 +236,12 @@ function EstimatorPage() {
 
                 <ScanSheetButton
                   onPieces={(scanned) => setPieces((prev) => [...prev, ...scanned])}
+                />
+
+                <QuickAddPieces
+                  onAdd={(added) => setPieces((prev) => [...prev, ...added])}
+                  title="Quick Add — raw dimensions & qty"
+                  showWeight
                 />
 
                 <PieceTable pieces={pieces} onChange={setPieces} />
