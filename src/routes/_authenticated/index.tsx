@@ -303,7 +303,13 @@ function EstimatorPage() {
                 <RecommendationPanel rec={rec} />
               </section>
 
-              <ManualSplitConfigurator pieces={pieces} rec={rec} maxCurbStack={maxCurbStack} smartStack={smartStack} />
+              <ManualSplitConfigurator
+                pieces={pieces}
+                rec={rec}
+                maxCurbStack={maxCurbStack}
+                smartStack={smartStack}
+                onAddPieces={(added) => setPieces((prev) => [...prev, ...added])}
+              />
 
 
             </div>
