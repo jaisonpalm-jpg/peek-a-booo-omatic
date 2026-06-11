@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { Plus } from "lucide-react";
 import type { Piece } from "@/lib/freight/types";
 import { cn } from "@/lib/utils";
@@ -56,7 +56,7 @@ export function QuickAddPieces({
     return Number.isFinite(n) ? n : 0;
   };
 
-  function submit(e?: React.FormEvent) {
+  function submit(e?: FormEvent) {
     e?.preventDefault();
     const L = parseNum(draft.length);
     const W = parseNum(draft.width);
@@ -191,7 +191,7 @@ function Field({
   className,
 }: {
   label: string;
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }) {
   return (
