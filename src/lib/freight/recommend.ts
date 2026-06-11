@@ -334,21 +334,47 @@ function buildDeckItems(
     }
   }
 
-  // Other loose (non-pipe, non-curb, non-boxable) pieces — rare but supported
-  for (const p of pieces) {
-    if (isBoxable(p) || isRoofCurb(p) || isPipe(p)) continue;
-    const d = effectiveDims(p);
-    for (let i = 0; i < p.qty; i++) {
-      items.push({
-        kind: "pipe-bundle",
-        label: p.description,
-        lengthIn: d.length,
-        widthIn: d.width,
-        heightIn: d.height,
-        units: 1,
-        oversize: flagsForPiece(p).length > 0,
-        weightLb: p.weight,
-      });
+  // Other loose (non-pipe, non-curb, non-boxable) pieces — typically raw
+  // L×W×H blocks from Quick Add. When Smart Stack is on, stack them like
+  // curbs up to the trailer's legal max height (with dunnage gap) and
+  // capped by maxCurbStack. When off, each unit lays flat.
+  const blockStacks = stackCurbs(
+    expandStackableBlocks(pieces),
+    maxHeightIn,
+    maxCurbStack,
+  );
+  for (const s of blockStacks) {
+    const bottom = s.layers[0];
+    const wPer = bottom.piece.weight ?? 0;
+    items.push({
+      kind: "curb-stack",
+      label: s.count > 1 ? `${bottom.piece.description} ×${s.count}` : bottom.piece.description,
+      lengthIn: bottom.length,
+      widthIn: bottom.width,
+      heightIn: s.heightUsed,
+      units: s.count,
+      oversize: s.layers.some((l) => flagsForPiece(l.piece).length > 0),
+      weightLb: wPer > 0 ? wPer * s.count : undefined,
+    });
+  }
+
+  // SMART_STACK off: lay each remaining loose piece flat.
+  if (!SMART_STACK) {
+    for (const p of pieces) {
+      if (isBoxable(p) || isRoofCurb(p) || isPipe(p)) continue;
+      const d = effectiveDims(p);
+      for (let i = 0; i < p.qty; i++) {
+        items.push({
+          kind: "pipe-bundle",
+          label: p.description,
+          lengthIn: d.length,
+          widthIn: d.width,
+          heightIn: d.height,
+          units: 1,
+          oversize: flagsForPiece(p).length > 0,
+          weightLb: p.weight,
+        });
+      }
     }
   }
 
