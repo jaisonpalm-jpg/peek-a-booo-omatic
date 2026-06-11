@@ -53,6 +53,7 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack 
 
   const [enabled, setEnabled] = useState<boolean>(() => !!rec.splitShipment);
   const [configs, setConfigs] = useState<ManualTruckConfig[]>(() => seedConfigs(rec));
+  const [adhocTarget, setAdhocTarget] = useState<number>(-1);
 
   // Auto-enable + seed when the recommendation flips to a multi-truck split.
   const splitKey = rec.splitShipment
@@ -399,6 +400,43 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack 
                 Reset to recommendation
               </button>
             </div>
+
+            {onAddPieces && (
+              <div className="ring-1 ring-border bg-secondary/40 p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Add ad-hoc piece by raw dimensions
+                  </p>
+                  <label className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
+                    Assign to
+                    <select
+                      value={adhocTarget}
+                      onChange={(e) => setAdhocTarget(Number(e.target.value))}
+                      className="text-[11px] font-mono px-2 py-1 border-2 border-rule bg-background focus:outline-none"
+                    >
+                      <option value={-1}>— unassigned —</option>
+                      {configs.map((_, i) => (
+                        <option key={i} value={i}>
+                          Truck {i + 1}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <QuickAddPieces
+                  hideHeader
+                  compact
+                  showDescription={false}
+                  ctaLabel="Add piece"
+                  onAdd={(added) => {
+                    onAddPieces(added);
+                    if (adhocTarget >= 0 && adhocTarget < configs.length) {
+                      added.forEach((p) => assign(p.id, adhocTarget));
+                    }
+                  }}
+                />
+              </div>
+            )}
 
             {configs.length === 0 && (
               <p className="text-xs text-muted-foreground italic">
