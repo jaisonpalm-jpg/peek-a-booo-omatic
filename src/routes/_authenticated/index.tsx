@@ -309,6 +309,15 @@ function EstimatorPage() {
                 maxCurbStack={maxCurbStack}
                 smartStack={smartStack}
                 onAddPieces={(added) => setPieces((prev) => [...prev, ...added])}
+                onReplacePiece={(pieceId, replacement) =>
+                  setPieces((prev) => {
+                    const idx = prev.findIndex((p) => p.id === pieceId);
+                    if (idx === -1) return prev;
+                    const next = [...prev];
+                    next.splice(idx, 1, ...replacement);
+                    return next;
+                  })
+                }
               />
 
 
