@@ -180,6 +180,31 @@ function expandCurbs(pieces: Piece[]): CurbInstance[] {
   return out;
 }
 
+/**
+ * Non-pipe, non-curb, non-boxable pieces (raw L×W×H blocks from Quick Add).
+ * When Smart Stack is on, these are eligible to stack like curbs up to legal
+ * height. When off, returns empty so each unit is placed flat by the loose
+ * loop in buildDeckItems.
+ */
+function expandStackableBlocks(pieces: Piece[]): CurbInstance[] {
+  if (!SMART_STACK) return [];
+  const out: CurbInstance[] = [];
+  for (const p of pieces) {
+    if (isBoxable(p) || isRoofCurb(p) || isPipe(p)) continue;
+    const d = effectiveDims(p);
+    for (let i = 0; i < p.qty; i++) {
+      out.push({
+        piece: p,
+        length: d.length,
+        width: d.width,
+        height: d.height,
+        footprint: d.length * d.width,
+      });
+    }
+  }
+  return out;
+}
+
 interface CurbStack {
   /** Footprint inches² consumed on the deck (largest piece in the stack). */
   footprint: number;
@@ -309,21 +334,47 @@ function buildDeckItems(
     }
   }
 
-  // Other loose (non-pipe, non-curb, non-boxable) pieces — rare but supported
-  for (const p of pieces) {
-    if (isBoxable(p) || isRoofCurb(p) || isPipe(p)) continue;
-    const d = effectiveDims(p);
-    for (let i = 0; i < p.qty; i++) {
-      items.push({
-        kind: "pipe-bundle",
-        label: p.description,
-        lengthIn: d.length,
-        widthIn: d.width,
-        heightIn: d.height,
-        units: 1,
-        oversize: flagsForPiece(p).length > 0,
-        weightLb: p.weight,
-      });
+  // Other loose (non-pipe, non-curb, non-boxable) pieces — typically raw
+  // L×W×H blocks from Quick Add. When Smart Stack is on, stack them like
+  // curbs up to the trailer's legal max height (with dunnage gap) and
+  // capped by maxCurbStack. When off, each unit lays flat.
+  const blockStacks = stackCurbs(
+    expandStackableBlocks(pieces),
+    maxHeightIn,
+    maxCurbStack,
+  );
+  for (const s of blockStacks) {
+    const bottom = s.layers[0];
+    const wPer = bottom.piece.weight ?? 0;
+    items.push({
+      kind: "curb-stack",
+      label: s.count > 1 ? `${bottom.piece.description} ×${s.count}` : bottom.piece.description,
+      lengthIn: bottom.length,
+      widthIn: bottom.width,
+      heightIn: s.heightUsed,
+      units: s.count,
+      oversize: s.layers.some((l) => flagsForPiece(l.piece).length > 0),
+      weightLb: wPer > 0 ? wPer * s.count : undefined,
+    });
+  }
+
+  // SMART_STACK off: lay each remaining loose piece flat.
+  if (!SMART_STACK) {
+    for (const p of pieces) {
+      if (isBoxable(p) || isRoofCurb(p) || isPipe(p)) continue;
+      const d = effectiveDims(p);
+      for (let i = 0; i < p.qty; i++) {
+        items.push({
+          kind: "pipe-bundle",
+          label: p.description,
+          lengthIn: d.length,
+          widthIn: d.width,
+          heightIn: d.height,
+          units: 1,
+          oversize: flagsForPiece(p).length > 0,
+          weightLb: p.weight,
+        });
+      }
     }
   }
 
@@ -563,14 +614,26 @@ function floorAreaIn2(
       const diameter = Math.max(d.width, d.height);
       const stack = pipeStackCount(p, diameter);
       area += (withSeparation(d.length, d.width) * p.qty) / stack;
-    } else {
+    } else if (!SMART_STACK) {
+      // Loose raw blocks lay flat when Smart Stack is off.
       area += withSeparation(d.length, d.width) * p.qty;
     }
+    // When SMART_STACK is on, raw blocks are stacked below and their
+    // footprint is counted via the block-stack pass.
   }
   const stacks = stackCurbs(expandCurbs(pieces), maxHeightIn, maxStackCount);
   for (const s of stacks) {
     const side = Math.sqrt(s.footprint);
     area += withSeparation(side, side);
+  }
+  const blockStacks = stackCurbs(
+    expandStackableBlocks(pieces),
+    maxHeightIn,
+    maxStackCount,
+  );
+  for (const s of blockStacks) {
+    const bottom = s.layers[0];
+    area += withSeparation(bottom.length, bottom.width);
   }
   // Filler boxes ride loose, stacked 2 high. Gasket pallets are accessory
   // freight and excluded from order length sizing.
