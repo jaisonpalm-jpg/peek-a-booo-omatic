@@ -273,6 +273,49 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack 
     setConfigs(seedConfigs(rec));
   }
 
+  function openSplit(p: Piece) {
+    const buckets = new Array(configs.length + 1).fill(0);
+    const truckIdx = pieceToTruck.get(p.id);
+    if (truckIdx === undefined || truckIdx < 0) buckets[0] = p.qty;
+    else buckets[truckIdx + 1] = p.qty;
+    setSplitDraft(buckets);
+    setSplitOpenId(p.id);
+  }
+
+  function applySplit(p: Piece) {
+    if (!onReplacePiece) return;
+    const sum = splitDraft.reduce((a, b) => a + b, 0);
+    if (sum !== p.qty) return;
+    const replacement: Piece[] = [];
+    const newTargets: { id: string; truckIdx: number }[] = [];
+    splitDraft.forEach((q, i) => {
+      if (q <= 0) return;
+      const newId =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `${p.id}-${i}-${Date.now()}`;
+      replacement.push({ ...p, id: newId, qty: q });
+      newTargets.push({ id: newId, truckIdx: i - 1 }); // -1 = unassigned
+    });
+    onReplacePiece(p.id, replacement);
+
+    // Update configs: strip old id, place new ids on their target trucks.
+    setConfigs((prev) => {
+      let next = prev.map((c) => ({
+        ...c,
+        pieceIds: c.pieceIds.filter((id) => id !== p.id),
+      }));
+      for (const { id, truckIdx } of newTargets) {
+        if (truckIdx < 0 || truckIdx >= next.length) continue;
+        next = next.map((c, i) =>
+          i === truckIdx ? { ...c, pieceIds: [...c.pieceIds, id] } : c,
+        );
+      }
+      return next;
+    });
+    setSplitOpenId(null);
+  }
+
   if (validPieces.length === 0) return null;
 
   return (
