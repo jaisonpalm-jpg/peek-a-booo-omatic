@@ -196,39 +196,7 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack 
         i === truckIdx ? { ...c, pieceIds: [...c.pieceIds, pieceId] } : c,
       );
 
-      const piecesById = new Map(validPieces.map((p) => [p.id, p]));
-      // Safety cap to prevent infinite loop on pathological inputs.
-      for (let guard = 0; guard < 50; guard++) {
-        const ev = evaluateManualSplit(validPieces, next, { maxCurbStack, smartStack });
-        const t = ev.trucks[truckIdx];
-        if (!t || t.fits) break;
-
-        // Find the largest piece on this truck OTHER than the one just
-        // assigned — moving the biggest frees the most space fastest.
-        const movable = next[truckIdx].pieceIds.filter((id) => id !== pieceId);
-        if (movable.length === 0) break;
-        movable.sort((a, b) => {
-          const pa = piecesById.get(a);
-          const pb = piecesById.get(b);
-          const fa = pa ? pa.length * pa.width : 0;
-          const fb = pb ? pb.length * pb.width : 0;
-          return fb - fa;
-        });
-        const moveId = movable[0];
-
-        // Pick the next truck (any other truck), or create one.
-        let targetIdx = next.findIndex((_, i) => i !== truckIdx);
-        if (targetIdx === -1) {
-          next = [...next, { trailerId: defaultTrailerId(rec), pieceIds: [] }];
-          targetIdx = next.length - 1;
-        }
-        next = next.map((c, i) => {
-          if (i === truckIdx) return { ...c, pieceIds: c.pieceIds.filter((id) => id !== moveId) };
-          if (i === targetIdx) return { ...c, pieceIds: [...c.pieceIds, moveId] };
-          return c;
-        });
-      }
-      return next;
+      return rebalanceOverflow(next, new Map([[truckIdx, pieceId]]));
     });
   }
 
@@ -245,45 +213,38 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack 
   }
 
   function autoFill() {
-    // Distribute unassigned pieces, longest first, to the truck with most
-    // remaining deck area capacity.
+    // Distribute all pieces, largest first, into the truck that stays fitting
+    // with the highest deck usage; create a second truck when needed.
     setConfigs((prev) => {
-      if (prev.length === 0) return prev;
-      const next = prev.map((c) => ({ ...c, pieceIds: [...c.pieceIds] }));
-      const assigned = new Set<string>(next.flatMap((c) => c.pieceIds));
+      let next = prev.length > 0
+        ? prev.map((c) => ({ ...c, pieceIds: [...c.pieceIds] }))
+        : [{ trailerId: defaultTrailerId(rec), pieceIds: [] }];
+      const assigned = new Set(next.flatMap((c) => c.pieceIds));
       const queue = [...validPieces]
         .filter((p) => !assigned.has(p.id))
         .sort((a, b) => b.length * b.width - a.length * a.width);
       for (const p of queue) {
-        // Try each truck; pick the one with lowest deckAreaPct after adding it that still fits.
+        // Try each truck; pick the one with highest deckAreaPct after adding it that still fits.
         let bestIdx = -1;
-        let bestPct = Number.POSITIVE_INFINITY;
+        let bestPct = -1;
         for (let i = 0; i < next.length; i++) {
           const trial = next.map((c, j) =>
             j === i ? { ...c, pieceIds: [...c.pieceIds, p.id] } : c,
           );
           const ev = evaluateManualSplit(validPieces, trial, { maxCurbStack, smartStack });
           const t = ev.trucks[i];
-          if (t.fits && t.deckAreaPct < bestPct) {
+          if (t.fits && t.deckAreaPct > bestPct) {
             bestPct = t.deckAreaPct;
             bestIdx = i;
           }
         }
         if (bestIdx === -1) {
-          // Fall back: assign to least-loaded truck even if overflow.
-          let minPct = Number.POSITIVE_INFINITY;
-          for (let i = 0; i < next.length; i++) {
-            const ev = evaluateManualSplit(validPieces, next, { maxCurbStack, smartStack });
-            if (ev.trucks[i].deckAreaPct < minPct) {
-              minPct = ev.trucks[i].deckAreaPct;
-              bestIdx = i;
-            }
-          }
-          if (bestIdx === -1) bestIdx = 0;
+          next = [...next, { trailerId: bestTrailerFor([p.id]), pieceIds: [p.id] }];
+          continue;
         }
         next[bestIdx].pieceIds.push(p.id);
       }
-      return next;
+      return rebalanceOverflow(next);
     });
   }
 
