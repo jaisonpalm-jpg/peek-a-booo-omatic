@@ -56,6 +56,8 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack 
   const [enabled, setEnabled] = useState<boolean>(() => !!rec.splitShipment);
   const [configs, setConfigs] = useState<ManualTruckConfig[]>(() => seedConfigs(rec));
   const [adhocTarget, setAdhocTarget] = useState<number>(-1);
+  const [splitOpenId, setSplitOpenId] = useState<string | null>(null);
+  const [splitDraft, setSplitDraft] = useState<number[]>([]); // index 0 = unassigned, 1..N = trucks
 
   // Auto-enable + seed when the recommendation flips to a multi-truck split.
   const splitKey = rec.splitShipment
