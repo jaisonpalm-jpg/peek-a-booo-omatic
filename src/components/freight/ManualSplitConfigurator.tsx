@@ -17,6 +17,8 @@ interface Props {
   smartStack?: boolean;
   /** When provided, ad-hoc pieces can be added directly from the configurator. */
   onAddPieces?: (pieces: Piece[]) => void;
+  /** When provided, enables splitting a piece's qty across multiple trucks. */
+  onReplacePiece?: (pieceId: string, replacement: Piece[]) => void;
 }
 
 const TRAILER_OPTIONS = TRAILERS.filter((t) =>
