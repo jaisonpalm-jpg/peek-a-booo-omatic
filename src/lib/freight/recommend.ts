@@ -1083,11 +1083,27 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
       const fitsWidth = widestNonCurbIn <= t.deckWidth;
       const fitsHeight = tallestIn <= t.maxHeight;
       const fits = fitsLength && fitsWidth && fitsHeight && layout.fits;
+      const linearOverage = Math.max(0, linearIn - t.deckLength);
+      const lengthOverage = Math.max(0, longestLoose - t.deckLength - t.maxOverhang);
+      const widthOverage = Math.max(0, widestNonCurbIn - t.deckWidth);
+      const heightOverage = Math.max(0, tallestIn - t.maxHeight);
+      const overageScore =
+        layout.unplacedCount * 100_000 +
+        linearOverage * 100 +
+        lengthOverage * 100 +
+        widthOverage * 500 +
+        heightOverage * 500 +
+        layout.totalOverhangIn;
       const utilizationPct = t.deckLength > 0 ? Math.min(100, (linearIn / t.deckLength) * 100) : 0;
       const deckAreaPct = deckArea > 0 ? Math.min(100, (needed / deckArea) * 100) : 0;
-      return { trailer: t, fits, linearFt: linearIn / 12, utilizationPct, deckAreaPct, neededIn2: needed, curbStacks, layout, scenarios };
+      return { trailer: t, fits, linearFt: linearIn / 12, utilizationPct, deckAreaPct, neededIn2: needed, curbStacks, layout, scenarios, overageScore };
     })
-    .sort((a, b) => a.trailer.deckLength - b.trailer.deckLength);
+    .sort((a, b) => {
+      if (a.fits !== b.fits) return a.fits ? -1 : 1;
+      if (a.layout.placedCount !== b.layout.placedCount) return b.layout.placedCount - a.layout.placedCount;
+      if (a.overageScore !== b.overageScore) return a.overageScore - b.overageScore;
+      return a.trailer.deckLength * a.trailer.deckWidth - b.trailer.deckLength * b.trailer.deckWidth;
+    });
 
 
   const insulated = validPieces.some((p) => p.insulated);
