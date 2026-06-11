@@ -47,7 +47,7 @@ function pieceFootprint(piece: Piece | undefined): number {
   return piece ? piece.length * piece.width : 0;
 }
 
-export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack = true, onAddPieces }: Props) {
+export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack = true, onAddPieces, onReplacePiece }: Props) {
   const validPieces = useMemo(
     () => pieces.filter((p) => p.qty > 0 && p.length > 0),
     [pieces],
