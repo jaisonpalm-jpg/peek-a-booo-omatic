@@ -382,11 +382,11 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack 
               <button
                 type="button"
                 onClick={autoFill}
-                disabled={configs.length === 0 || evalResult.unassignedPieceIds.length === 0}
+                disabled={evalResult.unassignedPieceIds.length === 0 && evalResult.allFit}
                 className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest px-3 py-2 bg-background ring-2 ring-rule hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Wand2 className="size-3.5" />
-                Auto-fill unassigned
+                Auto-fit trucks
               </button>
               <button
                 type="button"
