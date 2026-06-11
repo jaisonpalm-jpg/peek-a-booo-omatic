@@ -916,82 +916,94 @@ function pickSmallestFitting(
 }
 
 /**
- * Greedy split: assign largest pieces to truck 1 (try each trailer largest-first),
- * spillover to truck 2. Returns null if even two trucks can't cover the load.
+ * Two-truck optimizer: try every trailer pair, fill truck 1 as tightly as possible,
+ * then rank by most freight placed and smallest remaining overage.
  */
 function splitTwoTrucks(
   pieces: Piece[],
   maxCurbStack: number,
 ): import("./types").SplitShipment | null {
   if (pieces.length === 0) return null;
-  // Expand pieces into per-unit list, sorted longest first.
   const ranked = [...pieces].sort((a, b) => {
     const da = effectiveDims(a), db = effectiveDims(b);
     return db.length * db.width - da.length * da.width;
   });
+  const trailerPool = TRAILERS.filter((t) => (CANDIDATE_TRAILER_IDS as readonly string[]).includes(t.id));
+  type SplitAttempt = {
+    primary: TrailerLoadEval;
+    secondary: TrailerLoadEval;
+    onPrimary: Piece[];
+    onSecondary: Piece[];
+    allFit: boolean;
+    fitCount: number;
+    overageScore: number;
+    area: number;
+  };
 
-  // Try each open-deck trailer as the "primary" (carries the biggest stuff).
-  const primaries = TRAILERS.filter((t) => (OPEN_DECK_IDS as readonly string[]).includes(t.id))
-    .sort((a, b) => b.deckLength * b.deckWidth - a.deckLength * a.deckWidth);
-
-  for (const primary of primaries) {
+  const attempts: SplitAttempt[] = [];
+  for (const primaryTrailer of trailerPool) {
     const onPrimary: Piece[] = [];
-    const onSecondary: Piece[] = [];
     for (const p of ranked) {
       const trial = [...onPrimary, p];
-      const subBoxes = packBoxes(trial);
-      const items = buildDeckItems(trial, subBoxes, primary.maxHeight, maxCurbStack);
-      const layout = packDeckLayout(items, primary, "longest-first");
-      const needed = floorAreaIn2(trial, subBoxes, primary.maxHeight, maxCurbStack);
-      const linearIn = needed / primary.deckWidth;
-      const widest = trial.reduce(
-        (m, q) => (isRoofCurb(q) ? m : Math.max(m, effectiveDims(q).width)),
-        0,
-      );
-      const tallest = trial.reduce((m, q) => Math.max(m, effectiveDims(q).height), 0);
-      const fits =
-        layout.fits &&
-        linearIn <= primary.deckLength &&
-        widest <= primary.deckWidth &&
-        tallest <= primary.maxHeight;
-      if (fits) onPrimary.push(p);
-      else onSecondary.push(p);
+      if (evaluateTrailerLoad(trial, primaryTrailer, maxCurbStack).fits) {
+        onPrimary.push(p);
+      }
     }
+    const onPrimaryIds = new Set(onPrimary.map((p) => p.id));
+    const onSecondary = ranked.filter((p) => !onPrimaryIds.has(p.id));
     if (onPrimary.length === 0 || onSecondary.length === 0) continue;
-    const secondPick = pickSmallestFitting(onSecondary, maxCurbStack);
-    if (!secondPick) continue;
-    const firstBoxes = packBoxes(onPrimary);
-    const firstNeed = floorAreaIn2(onPrimary, firstBoxes, primary.maxHeight, maxCurbStack);
-    const firstLinearFt = firstNeed / primary.deckWidth / 12;
-    const firstDeckPct = Math.min(100, (firstNeed / (primary.deckLength * primary.deckWidth)) * 100);
-    const firstItems = buildDeckItems(onPrimary, firstBoxes, primary.maxHeight, maxCurbStack);
-    const firstLayout = packDeckLayout(firstItems, primary, "longest-first");
 
-    const sumPieces = (arr: Piece[]) => arr.reduce((n, p) => n + p.qty, 0);
-    return {
-      reason:
-        "Load exceeds the largest single trailer. Recommended split below — heaviest/longest freight on the primary, remainder on a secondary truck.",
-      trucks: [
-        {
-          trailer: primary,
-          pieceIds: onPrimary.map((p) => p.id),
-          summary: `${sumPieces(onPrimary)} piece${sumPieces(onPrimary) === 1 ? "" : "s"} (longest / largest)`,
-          linearFt: firstLinearFt,
-          deckAreaPct: firstDeckPct,
-          layout: firstLayout,
-        },
-        {
-          trailer: secondPick.trailer,
-          pieceIds: onSecondary.map((p) => p.id),
-          summary: `${sumPieces(onSecondary)} piece${sumPieces(onSecondary) === 1 ? "" : "s"} (remaining freight)`,
-          linearFt: secondPick.linearFt,
-          deckAreaPct: secondPick.deckAreaPct,
-          layout: secondPick.layout,
-        },
-      ],
-    };
+    for (const secondaryTrailer of trailerPool) {
+      const primary = evaluateTrailerLoad(onPrimary, primaryTrailer, maxCurbStack);
+      const secondary = evaluateTrailerLoad(onSecondary, secondaryTrailer, maxCurbStack);
+      const allFit = primary.fits && secondary.fits;
+      const fitCount =
+        (primary.fits ? onPrimary.length : primary.placedItems) +
+        (secondary.fits ? onSecondary.length : secondary.placedItems);
+      attempts.push({
+        primary,
+        secondary,
+        onPrimary,
+        onSecondary,
+        allFit,
+        fitCount,
+        overageScore: primary.overageScore + secondary.overageScore,
+        area: primaryTrailer.deckLength * primaryTrailer.deckWidth + secondaryTrailer.deckLength * secondaryTrailer.deckWidth,
+      });
+    }
   }
-  return null;
+
+  const best = attempts.sort((a, b) => {
+    if (a.allFit !== b.allFit) return a.allFit ? -1 : 1;
+    if (a.fitCount !== b.fitCount) return b.fitCount - a.fitCount;
+    if (a.overageScore !== b.overageScore) return a.overageScore - b.overageScore;
+    return a.area - b.area;
+  })[0];
+  if (!best || !best.allFit) return null;
+
+  const sumPieces = (arr: Piece[]) => arr.reduce((n, p) => n + p.qty, 0);
+  return {
+    reason:
+      "Load exceeds one trailer. Recommended split below maximizes truck 1, then places the remaining freight on the best-fit second truck.",
+    trucks: [
+      {
+        trailer: best.primary.trailer,
+        pieceIds: best.onPrimary.map((p) => p.id),
+        summary: `${sumPieces(best.onPrimary)} piece${sumPieces(best.onPrimary) === 1 ? "" : "s"} (maximized primary load)`,
+        linearFt: best.primary.linearFt,
+        deckAreaPct: best.primary.deckAreaPct,
+        layout: best.primary.layout,
+      },
+      {
+        trailer: best.secondary.trailer,
+        pieceIds: best.onSecondary.map((p) => p.id),
+        summary: `${sumPieces(best.onSecondary)} piece${sumPieces(best.onSecondary) === 1 ? "" : "s"} (automatic overflow)`,
+        linearFt: best.secondary.linearFt,
+        deckAreaPct: best.secondary.deckAreaPct,
+        layout: best.secondary.layout,
+      },
+    ],
+  };
 }
 
 
