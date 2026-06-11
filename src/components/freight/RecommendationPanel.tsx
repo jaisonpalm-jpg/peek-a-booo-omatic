@@ -371,7 +371,7 @@ function EnclosedCandidates({ candidates, pickId }: { candidates: Recommendation
 }
 
 function OpenDeckCandidates({ candidates, pickId }: { candidates: Recommendation["candidates"]; pickId?: string }) {
-  const list = candidates.filter((c) => ["hotshot-40", "flatbed-48", "conestoga-48"].includes(c.trailer.id));
+  const list = candidates.filter((c) => ["hotshot-40", "flatbed-48", "conestoga-48", "stepdeck-53", "rgn-53"].includes(c.trailer.id));
   if (list.length === 0) return <p className="text-xs text-muted-foreground">No open-deck candidates.</p>;
   return (
     <div className="space-y-4">
