@@ -38,6 +38,10 @@ function seedConfigs(rec: Recommendation): ManualTruckConfig[] {
   return [];
 }
 
+function pieceFootprint(piece: Piece | undefined): number {
+  return piece ? piece.length * piece.width : 0;
+}
+
 export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack = true }: Props) {
   const validPieces = useMemo(
     () => pieces.filter((p) => p.qty > 0 && p.length > 0),
@@ -54,11 +58,7 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack 
   useEffect(() => {
     if (!rec.splitShipment) return;
     setEnabled(true);
-    setConfigs((prev) => {
-      const allEmpty = prev.length === 0 || prev.every((c) => c.pieceIds.length === 0);
-      if (allEmpty) return seedConfigs(rec);
-      return prev;
-    });
+    setConfigs(seedConfigs(rec));
   }, [splitKey, rec]);
 
   // Drop pieces from configs when removed from the manifest.
@@ -86,6 +86,110 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack 
     return m;
   }, [configs]);
 
+  function bestTrailerFor(pieceIds: string[]): TrailerId {
+    const options = TRAILER_OPTIONS.map((opt) => {
+      const ev = evaluateManualSplit(validPieces, [{ trailerId: opt.id, pieceIds }], { maxCurbStack, smartStack });
+      const t = ev.trucks[0];
+      return {
+        id: opt.id,
+        fits: t.fits,
+        issues: t.issues.length,
+        area: opt.deckLength * opt.deckWidth,
+        deckAreaPct: t.deckAreaPct,
+      };
+    }).sort((a, b) => {
+      if (a.fits !== b.fits) return a.fits ? -1 : 1;
+      if (a.issues !== b.issues) return a.issues - b.issues;
+      if (a.fits && a.deckAreaPct !== b.deckAreaPct) return b.deckAreaPct - a.deckAreaPct;
+      return a.area - b.area;
+    });
+    return options[0]?.id ?? defaultTrailerId(rec);
+  }
+
+  function placeMovedPiece(draft: ManualTruckConfig[], moveId: string, sourceIdx: number): ManualTruckConfig[] {
+    const existingTargets = draft
+      .map((_, i) => i)
+      .filter((i) => i !== sourceIdx)
+      .map((i) => {
+        const trial = draft.map((c, j) =>
+          j === i ? { ...c, pieceIds: [...c.pieceIds, moveId] } : c,
+        );
+        const ev = evaluateManualSplit(validPieces, trial, { maxCurbStack, smartStack });
+        return { idx: i, fits: ev.trucks[i]?.fits ?? false, deckAreaPct: ev.trucks[i]?.deckAreaPct ?? 0 };
+      })
+      .filter((t) => t.fits)
+      .sort((a, b) => b.deckAreaPct - a.deckAreaPct);
+
+    if (existingTargets[0]) {
+      const targetIdx = existingTargets[0].idx;
+      return draft.map((c, i) =>
+        i === targetIdx ? { ...c, pieceIds: [...c.pieceIds, moveId] } : c,
+      );
+    }
+
+    const upgradeTargets = draft
+      .map((c, i) => ({ idx: i, pieceIds: [...c.pieceIds, moveId] }))
+      .filter((t) => t.idx !== sourceIdx)
+      .map((t) => {
+        const trailerId = bestTrailerFor(t.pieceIds);
+        const ev = evaluateManualSplit(validPieces, [{ trailerId, pieceIds: t.pieceIds }], { maxCurbStack, smartStack });
+        return { ...t, trailerId, fits: ev.trucks[0]?.fits ?? false, deckAreaPct: ev.trucks[0]?.deckAreaPct ?? 0 };
+      })
+      .filter((t) => t.fits)
+      .sort((a, b) => b.deckAreaPct - a.deckAreaPct);
+    if (upgradeTargets[0]) {
+      const target = upgradeTargets[0];
+      return draft.map((c, i) =>
+        i === target.idx ? { trailerId: target.trailerId, pieceIds: target.pieceIds } : c,
+      );
+    }
+
+    const emptyIdx = draft.findIndex((c, i) => i !== sourceIdx && c.pieceIds.length === 0);
+    if (emptyIdx >= 0) {
+      const trailerId = bestTrailerFor([moveId]);
+      return draft.map((c, i) =>
+        i === emptyIdx ? { trailerId, pieceIds: [moveId] } : c,
+      );
+    }
+
+    return [...draft, { trailerId: bestTrailerFor([moveId]), pieceIds: [moveId] }];
+  }
+
+  function rebalanceOverflow(configsToBalance: ManualTruckConfig[], protectedByTruck = new Map<number, string>()): ManualTruckConfig[] {
+    const piecesById = new Map(validPieces.map((p) => [p.id, p]));
+    let next = configsToBalance.map((c) => ({ ...c, pieceIds: [...new Set(c.pieceIds)] }));
+
+    for (let guard = 0; guard < 80; guard++) {
+      const ev = evaluateManualSplit(validPieces, next, { maxCurbStack, smartStack });
+      const sourceIdx = ev.trucks.findIndex((t) => t.pieceIds.length > 0 && !t.fits);
+      if (sourceIdx === -1) break;
+
+      const protectedId = protectedByTruck.get(sourceIdx);
+      const movable = next[sourceIdx].pieceIds.filter((id) => id !== protectedId);
+      if (movable.length === 0) break;
+
+      const smallestFix = [...movable]
+        .sort((a, b) => pieceFootprint(piecesById.get(a)) - pieceFootprint(piecesById.get(b)))
+        .find((id) => {
+          const trial = next.map((c, i) =>
+            i === sourceIdx ? { ...c, pieceIds: c.pieceIds.filter((pid) => pid !== id) } : c,
+          );
+          return evaluateManualSplit(validPieces, trial, { maxCurbStack, smartStack }).trucks[sourceIdx]?.fits;
+        });
+      const moveId = smallestFix ?? [...movable].sort(
+        (a, b) => pieceFootprint(piecesById.get(b)) - pieceFootprint(piecesById.get(a)),
+      )[0];
+      if (!moveId) break;
+
+      const withoutSource = next.map((c, i) =>
+        i === sourceIdx ? { ...c, pieceIds: c.pieceIds.filter((id) => id !== moveId) } : c,
+      );
+      next = placeMovedPiece(withoutSource, moveId, sourceIdx);
+    }
+
+    return next;
+  }
+
   /**
    * Assign a piece to a truck. If the assignment causes the target truck
    * to overflow, automatically peel the largest OTHER pieces off that
@@ -105,39 +209,7 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack 
         i === truckIdx ? { ...c, pieceIds: [...c.pieceIds, pieceId] } : c,
       );
 
-      const piecesById = new Map(validPieces.map((p) => [p.id, p]));
-      // Safety cap to prevent infinite loop on pathological inputs.
-      for (let guard = 0; guard < 50; guard++) {
-        const ev = evaluateManualSplit(validPieces, next, { maxCurbStack, smartStack });
-        const t = ev.trucks[truckIdx];
-        if (!t || t.fits) break;
-
-        // Find the largest piece on this truck OTHER than the one just
-        // assigned — moving the biggest frees the most space fastest.
-        const movable = next[truckIdx].pieceIds.filter((id) => id !== pieceId);
-        if (movable.length === 0) break;
-        movable.sort((a, b) => {
-          const pa = piecesById.get(a);
-          const pb = piecesById.get(b);
-          const fa = pa ? pa.length * pa.width : 0;
-          const fb = pb ? pb.length * pb.width : 0;
-          return fb - fa;
-        });
-        const moveId = movable[0];
-
-        // Pick the next truck (any other truck), or create one.
-        let targetIdx = next.findIndex((_, i) => i !== truckIdx);
-        if (targetIdx === -1) {
-          next = [...next, { trailerId: defaultTrailerId(rec), pieceIds: [] }];
-          targetIdx = next.length - 1;
-        }
-        next = next.map((c, i) => {
-          if (i === truckIdx) return { ...c, pieceIds: c.pieceIds.filter((id) => id !== moveId) };
-          if (i === targetIdx) return { ...c, pieceIds: [...c.pieceIds, moveId] };
-          return c;
-        });
-      }
-      return next;
+      return rebalanceOverflow(next, new Map([[truckIdx, pieceId]]));
     });
   }
 
@@ -154,45 +226,38 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack 
   }
 
   function autoFill() {
-    // Distribute unassigned pieces, longest first, to the truck with most
-    // remaining deck area capacity.
+    // Distribute all pieces, largest first, into the truck that stays fitting
+    // with the highest deck usage; create a second truck when needed.
     setConfigs((prev) => {
-      if (prev.length === 0) return prev;
-      const next = prev.map((c) => ({ ...c, pieceIds: [...c.pieceIds] }));
-      const assigned = new Set<string>(next.flatMap((c) => c.pieceIds));
+      let next = prev.length > 0
+        ? prev.map((c) => ({ ...c, pieceIds: [...c.pieceIds] }))
+        : [{ trailerId: defaultTrailerId(rec), pieceIds: [] }];
+      const assigned = new Set(next.flatMap((c) => c.pieceIds));
       const queue = [...validPieces]
         .filter((p) => !assigned.has(p.id))
         .sort((a, b) => b.length * b.width - a.length * a.width);
       for (const p of queue) {
-        // Try each truck; pick the one with lowest deckAreaPct after adding it that still fits.
+        // Try each truck; pick the one with highest deckAreaPct after adding it that still fits.
         let bestIdx = -1;
-        let bestPct = Number.POSITIVE_INFINITY;
+        let bestPct = -1;
         for (let i = 0; i < next.length; i++) {
           const trial = next.map((c, j) =>
             j === i ? { ...c, pieceIds: [...c.pieceIds, p.id] } : c,
           );
           const ev = evaluateManualSplit(validPieces, trial, { maxCurbStack, smartStack });
           const t = ev.trucks[i];
-          if (t.fits && t.deckAreaPct < bestPct) {
+          if (t.fits && t.deckAreaPct > bestPct) {
             bestPct = t.deckAreaPct;
             bestIdx = i;
           }
         }
         if (bestIdx === -1) {
-          // Fall back: assign to least-loaded truck even if overflow.
-          let minPct = Number.POSITIVE_INFINITY;
-          for (let i = 0; i < next.length; i++) {
-            const ev = evaluateManualSplit(validPieces, next, { maxCurbStack, smartStack });
-            if (ev.trucks[i].deckAreaPct < minPct) {
-              minPct = ev.trucks[i].deckAreaPct;
-              bestIdx = i;
-            }
-          }
-          if (bestIdx === -1) bestIdx = 0;
+          next = [...next, { trailerId: bestTrailerFor([p.id]), pieceIds: [p.id] }];
+          continue;
         }
         next[bestIdx].pieceIds.push(p.id);
       }
-      return next;
+      return rebalanceOverflow(next);
     });
   }
 
@@ -317,11 +382,11 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack 
               <button
                 type="button"
                 onClick={autoFill}
-                disabled={configs.length === 0 || evalResult.unassignedPieceIds.length === 0}
+                disabled={evalResult.unassignedPieceIds.length === 0 && evalResult.allFit}
                 className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest px-3 py-2 bg-background ring-2 ring-rule hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Wand2 className="size-3.5" />
-                Auto-fill unassigned
+                Auto-fit trucks
               </button>
               <button
                 type="button"
