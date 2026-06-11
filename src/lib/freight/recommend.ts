@@ -1169,7 +1169,7 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
   if (totalCurbs > 0) {
     const stacked = curbStacks.filter((s) => s.count > 1).length;
     notes.push(
-      `${totalCurbs} roof curb${totalCurbs === 1 ? "" : "s"} arranged in ${curbStacks.length} deck position${curbStacks.length === 1 ? "" : "s"}${stacked > 0 ? ` (${stacked} stacked with 2\" dunnage gaps)` : ""}.`,
+      `${totalCurbs} roof curb${totalCurbs === 1 ? "" : "s"} arranged in ${curbStacks.length} deck position${curbStacks.length === 1 ? "" : "s"}${stacked > 0 ? ` (${stacked} stacked with 2" dunnage gaps)` : ""}.`,
     );
   }
   if (insulated) {
