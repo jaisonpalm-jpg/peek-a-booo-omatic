@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as ShareTokenRouteImport } from './routes/share.$token'
+import { Route as AuthenticatedQuickRouteImport } from './routes/_authenticated/quick'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -33,14 +34,21 @@ const ShareTokenRoute = ShareTokenRouteImport.update({
   path: '/share/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedQuickRoute = AuthenticatedQuickRouteImport.update({
+  id: '/quick',
+  path: '/quick',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
+  '/quick': typeof AuthenticatedQuickRoute
   '/share/$token': typeof ShareTokenRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
+  '/quick': typeof AuthenticatedQuickRoute
   '/share/$token': typeof ShareTokenRoute
   '/': typeof AuthenticatedIndexRoute
 }
@@ -48,18 +56,20 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/quick': typeof AuthenticatedQuickRoute
   '/share/$token': typeof ShareTokenRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/share/$token'
+  fullPaths: '/' | '/auth' | '/quick' | '/share/$token'
   fileRoutesByTo: FileRoutesByTo
-  to: '/auth' | '/share/$token' | '/'
+  to: '/auth' | '/quick' | '/share/$token' | '/'
   id:
     | '__root__'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/quick'
     | '/share/$token'
     | '/_authenticated/'
   fileRoutesById: FileRoutesById
@@ -100,14 +110,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShareTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/quick': {
+      id: '/_authenticated/quick'
+      path: '/quick'
+      fullPath: '/quick'
+      preLoaderRoute: typeof AuthenticatedQuickRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedQuickRoute: typeof AuthenticatedQuickRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedQuickRoute: AuthenticatedQuickRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
 
