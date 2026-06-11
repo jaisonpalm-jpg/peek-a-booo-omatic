@@ -375,7 +375,7 @@ function OpenDeckCandidates({ candidates, pickId }: { candidates: Recommendation
   if (list.length === 0) return <p className="text-xs text-muted-foreground">No open-deck candidates.</p>;
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-px bg-border">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px bg-border">
         {list.map((c) => {
           const isPick = pickId === c.trailer.id;
           return (
