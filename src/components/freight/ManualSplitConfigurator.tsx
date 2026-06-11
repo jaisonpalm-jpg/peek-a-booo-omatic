@@ -17,6 +17,8 @@ interface Props {
   smartStack?: boolean;
   /** When provided, ad-hoc pieces can be added directly from the configurator. */
   onAddPieces?: (pieces: Piece[]) => void;
+  /** When provided, enables splitting a piece's qty across multiple trucks. */
+  onReplacePiece?: (pieceId: string, replacement: Piece[]) => void;
 }
 
 const TRAILER_OPTIONS = TRAILERS.filter((t) =>
@@ -45,7 +47,7 @@ function pieceFootprint(piece: Piece | undefined): number {
   return piece ? piece.length * piece.width : 0;
 }
 
-export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack = true, onAddPieces }: Props) {
+export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack = true, onAddPieces, onReplacePiece }: Props) {
   const validPieces = useMemo(
     () => pieces.filter((p) => p.qty > 0 && p.length > 0),
     [pieces],
@@ -54,6 +56,8 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack 
   const [enabled, setEnabled] = useState<boolean>(() => !!rec.splitShipment);
   const [configs, setConfigs] = useState<ManualTruckConfig[]>(() => seedConfigs(rec));
   const [adhocTarget, setAdhocTarget] = useState<number>(-1);
+  const [splitOpenId, setSplitOpenId] = useState<string | null>(null);
+  const [splitDraft, setSplitDraft] = useState<number[]>([]); // index 0 = unassigned, 1..N = trucks
 
   // Auto-enable + seed when the recommendation flips to a multi-truck split.
   const splitKey = rec.splitShipment
@@ -267,6 +271,49 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack 
 
   function resetToRecommendation() {
     setConfigs(seedConfigs(rec));
+  }
+
+  function openSplit(p: Piece) {
+    const buckets = new Array(configs.length + 1).fill(0);
+    const truckIdx = pieceToTruck.get(p.id);
+    if (truckIdx === undefined || truckIdx < 0) buckets[0] = p.qty;
+    else buckets[truckIdx + 1] = p.qty;
+    setSplitDraft(buckets);
+    setSplitOpenId(p.id);
+  }
+
+  function applySplit(p: Piece) {
+    if (!onReplacePiece) return;
+    const sum = splitDraft.reduce((a, b) => a + b, 0);
+    if (sum !== p.qty) return;
+    const replacement: Piece[] = [];
+    const newTargets: { id: string; truckIdx: number }[] = [];
+    splitDraft.forEach((q, i) => {
+      if (q <= 0) return;
+      const newId =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `${p.id}-${i}-${Date.now()}`;
+      replacement.push({ ...p, id: newId, qty: q });
+      newTargets.push({ id: newId, truckIdx: i - 1 }); // -1 = unassigned
+    });
+    onReplacePiece(p.id, replacement);
+
+    // Update configs: strip old id, place new ids on their target trucks.
+    setConfigs((prev) => {
+      let next = prev.map((c) => ({
+        ...c,
+        pieceIds: c.pieceIds.filter((id) => id !== p.id),
+      }));
+      for (const { id, truckIdx } of newTargets) {
+        if (truckIdx < 0 || truckIdx >= next.length) continue;
+        next = next.map((c, i) =>
+          i === truckIdx ? { ...c, pieceIds: [...c.pieceIds, id] } : c,
+        );
+      }
+      return next;
+    });
+    setSplitOpenId(null);
   }
 
   if (validPieces.length === 0) return null;
@@ -547,35 +594,98 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack 
                   {validPieces.map((p) => {
                     const truckIdx = pieceToTruck.get(p.id) ?? -1;
                     const isUnassigned = truckIdx === -1;
+                    const isSplitting = splitOpenId === p.id;
+                    const canSplit = !!onReplacePiece && p.qty > 1;
+                    const splitSum = splitDraft.reduce((a, b) => a + b, 0);
                     return (
                       <div
                         key={p.id}
-                        className={`flex items-center gap-3 px-3 py-2 text-xs ${
+                        className={`px-3 py-2 text-xs ${
                           isUnassigned ? "bg-warning-soft" : "bg-card"
                         }`}
                       >
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold truncate">
-                            {p.description || "(unnamed)"}
-                          </p>
-                          <p className="text-[10px] font-mono text-muted-foreground">
-                            {p.length}″ × {p.width}″ × {p.height}″ · qty {p.qty}
-                          </p>
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold truncate">
+                              {p.description || "(unnamed)"}
+                            </p>
+                            <p className="text-[10px] font-mono text-muted-foreground">
+                              {p.length}″ × {p.width}″ × {p.height}″ · qty {p.qty}
+                            </p>
+                          </div>
+                          {canSplit && (
+                            <button
+                              type="button"
+                              onClick={() => (isSplitting ? setSplitOpenId(null) : openSplit(p))}
+                              className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 bg-background ring-2 ring-rule hover:bg-secondary"
+                            >
+                              {isSplitting ? "Cancel" : "Split qty"}
+                            </button>
+                          )}
+                          <select
+                            value={truckIdx}
+                            onChange={(e) => assign(p.id, Number(e.target.value))}
+                            disabled={isSplitting}
+                            className={`text-[11px] font-mono px-2 py-1 border-2 border-rule focus:outline-none disabled:opacity-50 ${
+                              isUnassigned ? "bg-warning-soft" : "bg-secondary"
+                            }`}
+                          >
+                            <option value={-1}>— unassigned —</option>
+                            {configs.map((_, i) => (
+                              <option key={i} value={i}>
+                                Truck {i + 1}
+                              </option>
+                            ))}
+                          </select>
                         </div>
-                        <select
-                          value={truckIdx}
-                          onChange={(e) => assign(p.id, Number(e.target.value))}
-                          className={`text-[11px] font-mono px-2 py-1 border-2 border-rule focus:outline-none ${
-                            isUnassigned ? "bg-warning-soft" : "bg-secondary"
-                          }`}
-                        >
-                          <option value={-1}>— unassigned —</option>
-                          {configs.map((_, i) => (
-                            <option key={i} value={i}>
-                              Truck {i + 1}
-                            </option>
-                          ))}
-                        </select>
+                        {isSplitting && (
+                          <div className="mt-2 pt-2 border-t border-border space-y-2">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                              Split qty {p.qty} across trucks
+                            </p>
+                            <div className="flex flex-wrap items-end gap-2">
+                              {["Unassigned", ...configs.map((_, i) => `Truck ${i + 1}`)].map(
+                                (label, i) => (
+                                  <label key={i} className="flex flex-col gap-0.5">
+                                    <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                                      {label}
+                                    </span>
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      max={p.qty}
+                                      value={splitDraft[i] ?? 0}
+                                      onChange={(e) => {
+                                        const v = Math.max(0, Math.min(p.qty, Number(e.target.value) || 0));
+                                        setSplitDraft((prev) => {
+                                          const next = [...prev];
+                                          next[i] = v;
+                                          return next;
+                                        });
+                                      }}
+                                      className="w-16 text-xs font-mono px-2 py-1 border-2 border-rule bg-background focus:outline-none"
+                                    />
+                                  </label>
+                                ),
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => applySplit(p)}
+                                disabled={splitSum !== p.qty}
+                                className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 bg-rule text-background hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                              >
+                                Apply
+                              </button>
+                              <span
+                                className={`text-[10px] font-mono ${
+                                  splitSum === p.qty ? "text-success" : "text-warning"
+                                }`}
+                              >
+                                {splitSum} / {p.qty}
+                              </span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
