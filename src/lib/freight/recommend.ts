@@ -614,14 +614,26 @@ function floorAreaIn2(
       const diameter = Math.max(d.width, d.height);
       const stack = pipeStackCount(p, diameter);
       area += (withSeparation(d.length, d.width) * p.qty) / stack;
-    } else {
+    } else if (!SMART_STACK) {
+      // Loose raw blocks lay flat when Smart Stack is off.
       area += withSeparation(d.length, d.width) * p.qty;
     }
+    // When SMART_STACK is on, raw blocks are stacked below and their
+    // footprint is counted via the block-stack pass.
   }
   const stacks = stackCurbs(expandCurbs(pieces), maxHeightIn, maxStackCount);
   for (const s of stacks) {
     const side = Math.sqrt(s.footprint);
     area += withSeparation(side, side);
+  }
+  const blockStacks = stackCurbs(
+    expandStackableBlocks(pieces),
+    maxHeightIn,
+    maxStackCount,
+  );
+  for (const s of blockStacks) {
+    const bottom = s.layers[0];
+    area += withSeparation(bottom.length, bottom.width);
   }
   // Filler boxes ride loose, stacked 2 high. Gasket pallets are accessory
   // freight and excluded from order length sizing.
