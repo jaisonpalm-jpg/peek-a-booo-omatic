@@ -58,11 +58,7 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack 
   useEffect(() => {
     if (!rec.splitShipment) return;
     setEnabled(true);
-    setConfigs((prev) => {
-      const allEmpty = prev.length === 0 || prev.every((c) => c.pieceIds.length === 0);
-      if (allEmpty) return seedConfigs(rec);
-      return prev;
-    });
+    setConfigs(seedConfigs(rec));
   }, [splitKey, rec]);
 
   // Drop pieces from configs when removed from the manifest.
@@ -128,6 +124,23 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack 
       const targetIdx = existingTargets[0].idx;
       return draft.map((c, i) =>
         i === targetIdx ? { ...c, pieceIds: [...c.pieceIds, moveId] } : c,
+      );
+    }
+
+    const upgradeTargets = draft
+      .map((c, i) => ({ idx: i, pieceIds: [...c.pieceIds, moveId] }))
+      .filter((t) => t.idx !== sourceIdx)
+      .map((t) => {
+        const trailerId = bestTrailerFor(t.pieceIds);
+        const ev = evaluateManualSplit(validPieces, [{ trailerId, pieceIds: t.pieceIds }], { maxCurbStack, smartStack });
+        return { ...t, trailerId, fits: ev.trucks[0]?.fits ?? false, deckAreaPct: ev.trucks[0]?.deckAreaPct ?? 0 };
+      })
+      .filter((t) => t.fits)
+      .sort((a, b) => b.deckAreaPct - a.deckAreaPct);
+    if (upgradeTargets[0]) {
+      const target = upgradeTargets[0];
+      return draft.map((c, i) =>
+        i === target.idx ? { trailerId: target.trailerId, pieceIds: target.pieceIds } : c,
       );
     }
 
