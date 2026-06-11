@@ -8,12 +8,15 @@ import {
 import { TRAILERS } from "@/lib/freight/trailers";
 import type { Piece, Recommendation, TrailerId } from "@/lib/freight/types";
 import { TrailerLoadDiagram } from "./TrailerLoadDiagram";
+import { QuickAddPieces } from "./QuickAddPieces";
 
 interface Props {
   pieces: Piece[];
   rec: Recommendation;
   maxCurbStack: number;
   smartStack?: boolean;
+  /** When provided, ad-hoc pieces can be added directly from the configurator. */
+  onAddPieces?: (pieces: Piece[]) => void;
 }
 
 const TRAILER_OPTIONS = TRAILERS.filter((t) =>
@@ -42,7 +45,7 @@ function pieceFootprint(piece: Piece | undefined): number {
   return piece ? piece.length * piece.width : 0;
 }
 
-export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack = true }: Props) {
+export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack = true, onAddPieces }: Props) {
   const validPieces = useMemo(
     () => pieces.filter((p) => p.qty > 0 && p.length > 0),
     [pieces],
