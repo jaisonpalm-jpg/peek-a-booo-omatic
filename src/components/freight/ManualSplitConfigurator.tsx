@@ -38,6 +38,10 @@ function seedConfigs(rec: Recommendation): ManualTruckConfig[] {
   return [];
 }
 
+function pieceFootprint(piece: Piece | undefined): number {
+  return piece ? piece.length * piece.width : 0;
+}
+
 export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack = true }: Props) {
   const validPieces = useMemo(
     () => pieces.filter((p) => p.qty > 0 && p.length > 0),
@@ -85,6 +89,93 @@ export function ManualSplitConfigurator({ pieces, rec, maxCurbStack, smartStack 
     configs.forEach((c, i) => c.pieceIds.forEach((id) => m.set(id, i)));
     return m;
   }, [configs]);
+
+  function bestTrailerFor(pieceIds: string[]): TrailerId {
+    const options = TRAILER_OPTIONS.map((opt) => {
+      const ev = evaluateManualSplit(validPieces, [{ trailerId: opt.id, pieceIds }], { maxCurbStack, smartStack });
+      const t = ev.trucks[0];
+      return {
+        id: opt.id,
+        fits: t.fits,
+        issues: t.issues.length,
+        area: opt.deckLength * opt.deckWidth,
+        deckAreaPct: t.deckAreaPct,
+      };
+    }).sort((a, b) => {
+      if (a.fits !== b.fits) return a.fits ? -1 : 1;
+      if (a.issues !== b.issues) return a.issues - b.issues;
+      if (a.fits && a.deckAreaPct !== b.deckAreaPct) return b.deckAreaPct - a.deckAreaPct;
+      return a.area - b.area;
+    });
+    return options[0]?.id ?? defaultTrailerId(rec);
+  }
+
+  function placeMovedPiece(draft: ManualTruckConfig[], moveId: string, sourceIdx: number): ManualTruckConfig[] {
+    const existingTargets = draft
+      .map((_, i) => i)
+      .filter((i) => i !== sourceIdx)
+      .map((i) => {
+        const trial = draft.map((c, j) =>
+          j === i ? { ...c, pieceIds: [...c.pieceIds, moveId] } : c,
+        );
+        const ev = evaluateManualSplit(validPieces, trial, { maxCurbStack, smartStack });
+        return { idx: i, fits: ev.trucks[i]?.fits ?? false, deckAreaPct: ev.trucks[i]?.deckAreaPct ?? 0 };
+      })
+      .filter((t) => t.fits)
+      .sort((a, b) => b.deckAreaPct - a.deckAreaPct);
+
+    if (existingTargets[0]) {
+      const targetIdx = existingTargets[0].idx;
+      return draft.map((c, i) =>
+        i === targetIdx ? { ...c, pieceIds: [...c.pieceIds, moveId] } : c,
+      );
+    }
+
+    const emptyIdx = draft.findIndex((c, i) => i !== sourceIdx && c.pieceIds.length === 0);
+    if (emptyIdx >= 0) {
+      const trailerId = bestTrailerFor([moveId]);
+      return draft.map((c, i) =>
+        i === emptyIdx ? { trailerId, pieceIds: [moveId] } : c,
+      );
+    }
+
+    return [...draft, { trailerId: bestTrailerFor([moveId]), pieceIds: [moveId] }];
+  }
+
+  function rebalanceOverflow(configsToBalance: ManualTruckConfig[], protectedByTruck = new Map<number, string>()): ManualTruckConfig[] {
+    const piecesById = new Map(validPieces.map((p) => [p.id, p]));
+    let next = configsToBalance.map((c) => ({ ...c, pieceIds: [...new Set(c.pieceIds)] }));
+
+    for (let guard = 0; guard < 80; guard++) {
+      const ev = evaluateManualSplit(validPieces, next, { maxCurbStack, smartStack });
+      const sourceIdx = ev.trucks.findIndex((t) => t.pieceIds.length > 0 && !t.fits);
+      if (sourceIdx === -1) break;
+
+      const protectedId = protectedByTruck.get(sourceIdx);
+      const movable = next[sourceIdx].pieceIds.filter((id) => id !== protectedId);
+      if (movable.length === 0) break;
+
+      const smallestFix = [...movable]
+        .sort((a, b) => pieceFootprint(piecesById.get(a)) - pieceFootprint(piecesById.get(b)))
+        .find((id) => {
+          const trial = next.map((c, i) =>
+            i === sourceIdx ? { ...c, pieceIds: c.pieceIds.filter((pid) => pid !== id) } : c,
+          );
+          return evaluateManualSplit(validPieces, trial, { maxCurbStack, smartStack }).trucks[sourceIdx]?.fits;
+        });
+      const moveId = smallestFix ?? [...movable].sort(
+        (a, b) => pieceFootprint(piecesById.get(b)) - pieceFootprint(piecesById.get(a)),
+      )[0];
+      if (!moveId) break;
+
+      const withoutSource = next.map((c, i) =>
+        i === sourceIdx ? { ...c, pieceIds: c.pieceIds.filter((id) => id !== moveId) } : c,
+      );
+      next = placeMovedPiece(withoutSource, moveId, sourceIdx);
+    }
+
+    return next;
+  }
 
   /**
    * Assign a piece to a truck. If the assignment causes the target truck
