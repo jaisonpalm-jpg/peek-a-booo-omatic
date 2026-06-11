@@ -832,6 +832,73 @@ export function evaluateManualSplit(
   return { trucks, unassignedPieceIds, confidence, reason, totalLinearFt, allFit };
 }
 
+interface TrailerLoadEval {
+  trailer: TrailerSpec;
+  fits: boolean;
+  layout: DeckLayout;
+  linearFt: number;
+  deckAreaPct: number;
+  utilizationPct: number;
+  placedItems: number;
+  totalItems: number;
+  overageScore: number;
+}
+
+function evaluateTrailerLoad(
+  pieces: Piece[],
+  trailer: TrailerSpec,
+  maxCurbStack: number,
+): TrailerLoadEval {
+  const subBoxes = packBoxes(pieces);
+  const items = buildDeckItems(pieces, subBoxes, trailer.maxHeight, maxCurbStack);
+  const layout = packDeckLayout(items, trailer, "longest-first");
+  const needed = floorAreaIn2(pieces, subBoxes, trailer.maxHeight, maxCurbStack);
+  const linearIn = needed / trailer.deckWidth;
+  const longest = longestPieceIn(pieces);
+  const widestNonCurb = pieces.reduce(
+    (m, p) => (isRoofCurb(p) ? m : Math.max(m, effectiveDims(p).width)),
+    0,
+  );
+  const tallest = pieces.reduce((m, p) => Math.max(m, effectiveDims(p).height), 0);
+  const fits =
+    layout.fits &&
+    linearIn <= trailer.deckLength &&
+    longest <= trailer.deckLength + trailer.maxOverhang &&
+    widestNonCurb <= trailer.deckWidth &&
+    tallest <= trailer.maxHeight;
+  const deckArea = trailer.deckLength * trailer.deckWidth;
+  const linearOverage = Math.max(0, linearIn - trailer.deckLength);
+  const lengthOverage = Math.max(0, longest - trailer.deckLength - trailer.maxOverhang);
+  const widthOverage = Math.max(0, widestNonCurb - trailer.deckWidth);
+  const heightOverage = Math.max(0, tallest - trailer.maxHeight);
+  const overageScore =
+    layout.unplacedCount * 100_000 +
+    linearOverage * 100 +
+    lengthOverage * 100 +
+    widthOverage * 500 +
+    heightOverage * 500 +
+    layout.totalOverhangIn;
+
+  return {
+    trailer,
+    fits,
+    layout,
+    linearFt: linearIn / 12,
+    deckAreaPct: deckArea > 0 ? Math.min(100, (needed / deckArea) * 100) : 0,
+    utilizationPct: trailer.deckLength > 0 ? Math.min(100, (linearIn / trailer.deckLength) * 100) : 0,
+    placedItems: layout.placedCount,
+    totalItems: items.length,
+    overageScore,
+  };
+}
+
+function compareBestFit(a: TrailerLoadEval, b: TrailerLoadEval): number {
+  if (a.fits !== b.fits) return a.fits ? -1 : 1;
+  if (a.placedItems !== b.placedItems) return b.placedItems - a.placedItems;
+  if (a.overageScore !== b.overageScore) return a.overageScore - b.overageScore;
+  return a.trailer.deckLength * a.trailer.deckWidth - b.trailer.deckLength * b.trailer.deckWidth;
+}
+
 /** Find the smallest candidate trailer that fits a given subset of pieces. */
 function pickSmallestFitting(
   pieces: Piece[],
@@ -839,29 +906,13 @@ function pickSmallestFitting(
   allowOpenDeck = true,
 ): { trailer: TrailerSpec; linearFt: number; deckAreaPct: number; layout: DeckLayout } | null {
   if (pieces.length === 0) return null;
-  const subBoxes = packBoxes(pieces);
-  const longest = longestPieceIn(pieces);
-  const widestNonCurb = pieces.reduce(
-    (m, p) => (isRoofCurb(p) ? m : Math.max(m, effectiveDims(p).width)),
-    0,
-  );
-  const tallest = pieces.reduce((m, p) => Math.max(m, effectiveDims(p).height), 0);
   const ids = allowOpenDeck ? CANDIDATE_TRAILER_IDS : CANDIDATE_TRAILER_IDS.filter((id) => !(OPEN_DECK_IDS as readonly string[]).includes(id));
   const pool = TRAILERS.filter((t) => (ids as readonly string[]).includes(t.id))
     .sort((a, b) => a.deckLength * a.deckWidth - b.deckLength * b.deckWidth);
-  for (const t of pool) {
-    if (widestNonCurb > t.deckWidth || tallest > t.maxHeight) continue;
-    if (longest > t.deckLength + t.maxOverhang) continue;
-    const items = buildDeckItems(pieces, subBoxes, t.maxHeight, maxCurbStack);
-    const layout = packDeckLayout(items, t, "longest-first");
-    const needed = floorAreaIn2(pieces, subBoxes, t.maxHeight, maxCurbStack);
-    const linearIn = needed / t.deckWidth;
-    const deckAreaPct = Math.min(100, (needed / (t.deckLength * t.deckWidth)) * 100);
-    if (layout.fits && linearIn <= t.deckLength) {
-      return { trailer: t, linearFt: linearIn / 12, deckAreaPct, layout };
-    }
-  }
-  return null;
+  const best = pool.map((t) => evaluateTrailerLoad(pieces, t, maxCurbStack)).sort(compareBestFit)[0];
+  return best?.fits
+    ? { trailer: best.trailer, linearFt: best.linearFt, deckAreaPct: best.deckAreaPct, layout: best.layout }
+    : null;
 }
 
 /**
