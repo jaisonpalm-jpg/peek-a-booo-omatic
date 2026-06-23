@@ -192,7 +192,8 @@ function TopDownView({ trailer, layout, centeredY }: Props & { centeredY: number
   const svgH = deckPxWid + PAD * 2 + 18;
 
   return (
-    <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full h-auto bg-secondary/40 border border-border">
+    <svg data-export-svg="topdown" viewBox={`0 0 ${svgW} ${svgH}`} className="w-full h-auto bg-secondary/40 border border-border">
+
       <rect
         x={PAD}
         y={PAD}
@@ -392,7 +393,7 @@ function IsoView({ trailer, layout, centeredY }: Props & { centeredY: number[] }
   });
 
   return (
-    <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full h-auto bg-secondary/40 border border-border">
+    <svg data-export-svg="iso" viewBox={`0 0 ${svgW} ${svgH}`} className="w-full h-auto bg-secondary/40 border border-border">
       {overhangPath && (
         <polygon
           points={overhangPath.map((p) => `${p.x},${p.y}`).join(" ")}
