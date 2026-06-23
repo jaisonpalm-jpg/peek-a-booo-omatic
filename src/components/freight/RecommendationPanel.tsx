@@ -212,11 +212,12 @@ export function RecommendationPanel({ rec, jobName = "", pieces = [] }: Recommen
 
           <div className="p-4">
             {tab === "enclosed" && (
-              <EnclosedCandidates candidates={candidates} pickId={trailer?.id} selectedId={selectedEnclosedId} onSelect={setSelectedEnclosedId} />
+              <EnclosedCandidates candidates={candidates} pickId={trailer?.id} selectedId={selectedEnclosedId} onSelect={setSelectedEnclosedId} jobName={jobName} pieces={pieces} rec={rec} />
             )}
             {tab === "open" && (
-              <OpenDeckCandidates candidates={candidates} pickId={trailer?.id} selectedId={selectedOpenId} onSelect={setSelectedOpenId} />
+              <OpenDeckCandidates candidates={candidates} pickId={trailer?.id} selectedId={selectedOpenId} onSelect={setSelectedOpenId} jobName={jobName} pieces={pieces} rec={rec} />
             )}
+
           </div>
         </div>
       )}
