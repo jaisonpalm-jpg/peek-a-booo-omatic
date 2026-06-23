@@ -21,6 +21,12 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
   const hasEnclosed = candidates.some((c) => ["box-16", "box-26", "dryvan-53"].includes(c.trailer.id));
   const hasEnclosedFit = candidates.some((c) => c.fits && ["box-16", "box-26", "dryvan-53"].includes(c.trailer.id));
   const [tab, setTab] = useState<"enclosed" | "open">(hasEnclosedFit ? "enclosed" : "open");
+  const [selectedEnclosedId, setSelectedEnclosedId] = useState<string | undefined>(
+    trailer && ["box-16", "box-26", "dryvan-53"].includes(trailer.id) ? trailer.id : candidates.find((c) => ["box-16", "box-26", "dryvan-53"].includes(c.trailer.id) && c.fits)?.trailer.id ?? candidates.find((c) => ["box-16", "box-26", "dryvan-53"].includes(c.trailer.id))?.trailer.id,
+  );
+  const [selectedOpenId, setSelectedOpenId] = useState<string | undefined>(
+    trailer && ["hotshot-40", "flatbed-48", "conestoga-48", "stepdeck-53", "rgn-53"].includes(trailer.id) ? trailer.id : candidates.find((c) => ["hotshot-40", "flatbed-48", "conestoga-48", "stepdeck-53", "rgn-53"].includes(c.trailer.id) && c.fits)?.trailer.id ?? candidates.find((c) => ["hotshot-40", "flatbed-48", "conestoga-48", "stepdeck-53", "rgn-53"].includes(c.trailer.id))?.trailer.id,
+  );
 
   return (
     <div className="space-y-6">
@@ -202,10 +208,10 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
 
           <div className="p-4">
             {tab === "enclosed" && (
-              <EnclosedCandidates candidates={candidates} pickId={trailer?.id} />
+              <EnclosedCandidates candidates={candidates} pickId={trailer?.id} selectedId={selectedEnclosedId} onSelect={setSelectedEnclosedId} />
             )}
             {tab === "open" && (
-              <OpenDeckCandidates candidates={candidates} pickId={trailer?.id} />
+              <OpenDeckCandidates candidates={candidates} pickId={trailer?.id} selectedId={selectedOpenId} onSelect={setSelectedOpenId} />
             )}
           </div>
         </div>
@@ -316,21 +322,25 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
   );
 }
 
-function EnclosedCandidates({ candidates, pickId }: { candidates: Recommendation["candidates"]; pickId?: string }) {
+function EnclosedCandidates({ candidates, pickId, selectedId, onSelect }: { candidates: Recommendation["candidates"]; pickId?: string; selectedId?: string; onSelect: (id: string) => void }) {
   const list = candidates.filter((c) => ["box-16", "box-26", "dryvan-53"].includes(c.trailer.id));
   if (list.length === 0) return <p className="text-xs text-muted-foreground">No enclosed candidates.</p>;
+  const selected = list.find((c) => c.trailer.id === selectedId) ?? list.find((c) => c.trailer.id === pickId) ?? list[0];
   return (
     <div className="space-y-4">
       <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-        Floor-Area Utilization by Truck
+        Floor-Area Utilization by Truck · tap to view layout
       </p>
       <div className="grid grid-cols-3 gap-px bg-border">
         {list.map((c) => {
           const isPick = pickId === c.trailer.id;
+          const isSelected = selected.trailer.id === c.trailer.id;
           return (
-            <div
+            <button
               key={c.trailer.id}
-              className={`p-4 bg-card ${isPick ? "ring-2 ring-success ring-inset" : ""}`}
+              type="button"
+              onClick={() => onSelect(c.trailer.id)}
+              className={`p-4 bg-card text-left transition-colors ${isSelected ? "ring-2 ring-rule ring-inset" : "hover:bg-secondary"}`}
             >
               <div className="flex items-center justify-between gap-1 mb-2">
                 <p className="text-[10px] font-bold uppercase tracking-tight">
@@ -362,26 +372,50 @@ function EnclosedCandidates({ candidates, pickId }: { candidates: Recommendation
                   Won&apos;t fit
                 </p>
               )}
-            </div>
+            </button>
           );
         })}
+      </div>
+      <div className="pt-2 space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-1">
+          <p className="text-sm font-bold">{selected.trailer.name}</p>
+          <span className="text-[10px] font-mono text-muted-foreground uppercase">
+            max {(selected.trailer.maxHeight / 12).toFixed(1)}&apos; tall
+            {pickId === selected.trailer.id && (
+              <span className="ml-2 text-success font-bold">· pick</span>
+            )}
+          </span>
+        </div>
+        <ScenarioComparison candidate={selected} />
+        {selected.curbStacks.length > 0 && (
+          <div className="pt-2">
+            <CurbStackDiagram stacks={selected.curbStacks} maxHeightIn={selected.trailer.maxHeight} />
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function OpenDeckCandidates({ candidates, pickId }: { candidates: Recommendation["candidates"]; pickId?: string }) {
+function OpenDeckCandidates({ candidates, pickId, selectedId, onSelect }: { candidates: Recommendation["candidates"]; pickId?: string; selectedId?: string; onSelect: (id: string) => void }) {
   const list = candidates.filter((c) => ["hotshot-40", "flatbed-48", "conestoga-48", "stepdeck-53", "rgn-53"].includes(c.trailer.id));
   if (list.length === 0) return <p className="text-xs text-muted-foreground">No open-deck candidates.</p>;
+  const selected = list.find((c) => c.trailer.id === selectedId) ?? list.find((c) => c.trailer.id === pickId) ?? list[0];
   return (
     <div className="space-y-4">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+        Tap a trailer to view its layout
+      </p>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px bg-border">
         {list.map((c) => {
           const isPick = pickId === c.trailer.id;
+          const isSelected = selected.trailer.id === c.trailer.id;
           return (
-            <div
+            <button
               key={c.trailer.id}
-              className={`p-4 bg-card ${isPick ? "ring-2 ring-success ring-inset" : ""}`}
+              type="button"
+              onClick={() => onSelect(c.trailer.id)}
+              className={`p-4 bg-card text-left transition-colors ${isSelected ? "ring-2 ring-rule ring-inset" : "hover:bg-secondary"}`}
             >
               <div className="flex items-center justify-between gap-1 mb-2">
                 <p className="text-[10px] font-bold uppercase tracking-tight">
@@ -413,7 +447,7 @@ function OpenDeckCandidates({ candidates, pickId }: { candidates: Recommendation
                   Won&apos;t fit
                 </p>
               )}
-            </div>
+            </button>
           );
         })}
       </div>
@@ -427,33 +461,24 @@ function OpenDeckCandidates({ candidates, pickId }: { candidates: Recommendation
           freight on-deck; <strong>Max Gaskets</strong> fills leftover deck area with extra
           gasket pallets.
         </p>
-        <div className="divide-y-2 divide-rule">
-          {list.filter((c) => c.trailer.id === pickId).map((c) => {
-            const isPick = true;
-
-            return (
-              <div key={c.trailer.id} className="py-4 space-y-3">
-                <div className="flex items-center justify-between flex-wrap gap-1">
-                  <p className="text-sm font-bold">{c.trailer.name}</p>
-                  <span className="text-[10px] font-mono text-muted-foreground uppercase">
-                    max {(c.trailer.maxHeight / 12).toFixed(1)}&apos; tall
-                    {isPick && (
-                      <span className="ml-2 text-success font-bold">· pick</span>
-                    )}
-                  </span>
-                </div>
-                <ScenarioComparison candidate={c} />
-                {c.curbStacks.length > 0 && (
-                  <div className="pt-2">
-                    <CurbStackDiagram stacks={c.curbStacks} maxHeightIn={c.trailer.maxHeight} />
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        <div className="py-4 space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-1">
+            <p className="text-sm font-bold">{selected.trailer.name}</p>
+            <span className="text-[10px] font-mono text-muted-foreground uppercase">
+              max {(selected.trailer.maxHeight / 12).toFixed(1)}&apos; tall
+              {pickId === selected.trailer.id && (
+                <span className="ml-2 text-success font-bold">· pick</span>
+              )}
+            </span>
+          </div>
+          <ScenarioComparison candidate={selected} />
+          {selected.curbStacks.length > 0 && (
+            <div className="pt-2">
+              <CurbStackDiagram stacks={selected.curbStacks} maxHeightIn={selected.trailer.maxHeight} />
+            </div>
+          )}
         </div>
       </div>
-
     </div>
   );
 }
