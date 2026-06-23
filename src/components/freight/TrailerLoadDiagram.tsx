@@ -75,13 +75,13 @@ export function TrailerLoadDiagram({ trailer, layout }: Props) {
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             Top-Down (2D)
           </p>
-          <TopDownView trailer={trailer} layout={layout} />
+          <TopDownView trailer={trailer} layout={layout} centeredY={centeredY} />
         </div>
         <div className="space-y-1.5">
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             Isometric (3D)
           </p>
-          <IsoView trailer={trailer} layout={layout} />
+          <IsoView trailer={trailer} layout={layout} centeredY={centeredY} />
         </div>
       </div>
     </div>
