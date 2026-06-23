@@ -23,6 +23,27 @@ function fmtLb(n: number): string {
   return `${Math.round(n)} lb`;
 }
 
+/**
+ * Compute a per-placement Y offset so that a piece sitting alone in its
+ * length-slot (no side-by-side neighbor along the trailer) is centered on
+ * the deck width — matching how a driver would actually stage a single
+ * piece down the centerline. Pieces that share length-range with another
+ * placement keep their original Y so side-by-side layouts stay intact.
+ */
+function computeCenteredY(layout: DeckLayout, trailer: TrailerSpec): number[] {
+  const ps = layout.placements;
+  return ps.map((p, i) => {
+    const hasNeighbor = ps.some((q, j) => {
+      if (i === j) return false;
+      const xOverlap =
+        p.x < q.x + q.item.lengthIn && q.x < p.x + p.item.lengthIn;
+      return xOverlap;
+    });
+    if (hasNeighbor) return p.y;
+    return Math.max(0, (trailer.deckWidth - p.item.widthIn) / 2);
+  });
+}
+
 export function TrailerLoadDiagram({ trailer, layout }: Props) {
   if (layout.placements.length === 0) {
     return (
@@ -45,6 +66,8 @@ export function TrailerLoadDiagram({ trailer, layout }: Props) {
     kindStats.set(p.item.kind, cur);
   }
 
+  const centeredY = computeCenteredY(layout, trailer);
+
   return (
     <div className="space-y-3">
       <Legend kindStats={kindStats} layout={layout} trailer={trailer} />
@@ -54,13 +77,13 @@ export function TrailerLoadDiagram({ trailer, layout }: Props) {
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             Top-Down (2D)
           </p>
-          <TopDownView trailer={trailer} layout={layout} />
+          <TopDownView trailer={trailer} layout={layout} centeredY={centeredY} />
         </div>
         <div className="space-y-1.5">
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             Isometric (3D)
           </p>
-          <IsoView trailer={trailer} layout={layout} />
+          <IsoView trailer={trailer} layout={layout} centeredY={centeredY} />
         </div>
       </div>
     </div>
@@ -155,7 +178,7 @@ function Legend({
 
 /* ---------------- 2D top-down ---------------- */
 
-function TopDownView({ trailer, layout }: Props) {
+function TopDownView({ trailer, layout, centeredY }: Props & { centeredY: number[] }) {
   const PAD = 14;
   const targetW = 420;
   const totalLen = trailer.deckLength + trailer.maxOverhang;
@@ -214,7 +237,7 @@ function TopDownView({ trailer, layout }: Props) {
       {layout.placements.map((p, i) => {
         const c = COLORS[p.item.kind];
         const x = PAD + p.x * scale;
-        const y = PAD + p.y * widScale;
+        const y = PAD + (centeredY[i] ?? p.y) * widScale;
         const w = p.item.lengthIn * scale;
         const h = p.item.widthIn * widScale;
         const showPos = w > 18 && h > 10;
@@ -328,7 +351,7 @@ function project(x: number, y: number, z: number, s: number) {
   };
 }
 
-function IsoView({ trailer, layout }: Props) {
+function IsoView({ trailer, layout, centeredY }: Props & { centeredY: number[] }) {
   const PAD = 20;
   const targetW = 460;
 
@@ -361,8 +384,11 @@ function IsoView({ trailer, layout }: Props) {
       ]
     : null;
 
+  const yByPlacement = new Map(
+    layout.placements.map((p, i) => [p, centeredY[i] ?? p.y] as const),
+  );
   const ordered = [...layout.placements].sort((a, b) => {
-    return (a.x + a.y) - (b.x + b.y);
+    return (a.x + (yByPlacement.get(a) ?? a.y)) - (b.x + (yByPlacement.get(b) ?? b.y));
   });
 
   return (
@@ -402,7 +428,7 @@ function IsoView({ trailer, layout }: Props) {
           <IsoBox
             key={i}
             x={p.x}
-            y={p.y}
+            y={yByPlacement.get(p) ?? p.y}
             z={0}
             l={p.item.lengthIn}
             w={p.item.widthIn}
