@@ -351,7 +351,7 @@ function project(x: number, y: number, z: number, s: number) {
   };
 }
 
-function IsoView({ trailer, layout }: Props) {
+function IsoView({ trailer, layout, centeredY }: Props & { centeredY: number[] }) {
   const PAD = 20;
   const targetW = 460;
 
