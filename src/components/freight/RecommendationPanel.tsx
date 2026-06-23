@@ -451,57 +451,6 @@ function OpenDeckCandidates({ candidates, pickId, selectedId, onSelect }: { cand
           );
         })}
       </div>
-    </div>
-  );
-}
-
-function OpenDeckCandidates({ candidates, pickId }: { candidates: Recommendation["candidates"]; pickId?: string }) {
-  const list = candidates.filter((c) => ["hotshot-40", "flatbed-48", "conestoga-48", "stepdeck-53", "rgn-53"].includes(c.trailer.id));
-  if (list.length === 0) return <p className="text-xs text-muted-foreground">No open-deck candidates.</p>;
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px bg-border">
-        {list.map((c) => {
-          const isPick = pickId === c.trailer.id;
-          return (
-            <div
-              key={c.trailer.id}
-              className={`p-4 bg-card ${isPick ? "ring-2 ring-success ring-inset" : ""}`}
-            >
-              <div className="flex items-center justify-between gap-1 mb-2">
-                <p className="text-[10px] font-bold uppercase tracking-tight">
-                  {c.trailer.shortName}
-                </p>
-                {isPick && (
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-success">
-                    Pick
-                  </span>
-                )}
-              </div>
-              <p className="text-2xl font-semibold tabular-nums">
-                {Math.round(c.deckAreaPct)}
-                <span className="text-xs text-muted-foreground font-normal">%</span>
-              </p>
-              <div className="w-full h-1.5 bg-secondary overflow-hidden mt-2">
-                <div
-                  className={`h-full transition-all ${
-                    !c.fits ? "bg-warning" : c.deckAreaPct > 90 ? "bg-warning" : "bg-success"
-                  }`}
-                  style={{ width: `${Math.min(100, c.deckAreaPct)}%` }}
-                />
-              </div>
-              <p className="text-[10px] text-muted-foreground mt-2 font-mono">
-                {c.linearFt.toFixed(1)} / {Math.round(c.trailer.deckLength / 12)} ft
-              </p>
-              {!c.fits && (
-                <p className="text-[10px] text-warning font-bold uppercase tracking-widest mt-1">
-                  Won&apos;t fit
-                </p>
-              )}
-            </div>
-          );
-        })}
-      </div>
       <div className="space-y-3 pt-2">
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
           Recommended Load Layout — Compare Packing Scenarios
@@ -512,33 +461,24 @@ function OpenDeckCandidates({ candidates, pickId }: { candidates: Recommendation
           freight on-deck; <strong>Max Gaskets</strong> fills leftover deck area with extra
           gasket pallets.
         </p>
-        <div className="divide-y-2 divide-rule">
-          {list.filter((c) => c.trailer.id === pickId).map((c) => {
-            const isPick = true;
-
-            return (
-              <div key={c.trailer.id} className="py-4 space-y-3">
-                <div className="flex items-center justify-between flex-wrap gap-1">
-                  <p className="text-sm font-bold">{c.trailer.name}</p>
-                  <span className="text-[10px] font-mono text-muted-foreground uppercase">
-                    max {(c.trailer.maxHeight / 12).toFixed(1)}&apos; tall
-                    {isPick && (
-                      <span className="ml-2 text-success font-bold">· pick</span>
-                    )}
-                  </span>
-                </div>
-                <ScenarioComparison candidate={c} />
-                {c.curbStacks.length > 0 && (
-                  <div className="pt-2">
-                    <CurbStackDiagram stacks={c.curbStacks} maxHeightIn={c.trailer.maxHeight} />
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        <div className="py-4 space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-1">
+            <p className="text-sm font-bold">{selected.trailer.name}</p>
+            <span className="text-[10px] font-mono text-muted-foreground uppercase">
+              max {(selected.trailer.maxHeight / 12).toFixed(1)}&apos; tall
+              {pickId === selected.trailer.id && (
+                <span className="ml-2 text-success font-bold">· pick</span>
+              )}
+            </span>
+          </div>
+          <ScenarioComparison candidate={selected} />
+          {selected.curbStacks.length > 0 && (
+            <div className="pt-2">
+              <CurbStackDiagram stacks={selected.curbStacks} maxHeightIn={selected.trailer.maxHeight} />
+            </div>
+          )}
         </div>
       </div>
-
     </div>
   );
 }
