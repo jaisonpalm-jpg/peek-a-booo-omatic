@@ -428,7 +428,7 @@ function IsoView({ trailer, layout, centeredY }: Props & { centeredY: number[] }
           <IsoBox
             key={i}
             x={p.x}
-            y={p.y}
+            y={yByPlacement.get(p) ?? p.y}
             z={0}
             l={p.item.lengthIn}
             w={p.item.widthIn}
