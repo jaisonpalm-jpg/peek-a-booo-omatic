@@ -327,7 +327,7 @@ export function RecommendationPanel({ rec, jobName = "", pieces = [] }: Recommen
   );
 }
 
-function EnclosedCandidates({ candidates, pickId, selectedId, onSelect }: { candidates: Recommendation["candidates"]; pickId?: string; selectedId?: string; onSelect: (id: string) => void }) {
+function EnclosedCandidates({ candidates, pickId, selectedId, onSelect, jobName, pieces, rec }: { candidates: Recommendation["candidates"]; pickId?: string; selectedId?: string; onSelect: (id: string) => void; jobName: string; pieces: Piece[]; rec: Recommendation }) {
   const list = candidates.filter((c) => ["box-16", "box-26", "dryvan-53"].includes(c.trailer.id));
   if (list.length === 0) return <p className="text-xs text-muted-foreground">No enclosed candidates.</p>;
   const selected = list.find((c) => c.trailer.id === selectedId) ?? list.find((c) => c.trailer.id === pickId) ?? list[0];
@@ -381,7 +381,7 @@ function EnclosedCandidates({ candidates, pickId, selectedId, onSelect }: { cand
           );
         })}
       </div>
-      <div className="pt-2 space-y-3">
+      <div id="selected-trailer-export-enclosed" className="pt-2 space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-1">
           <p className="text-sm font-bold">{selected.trailer.name}</p>
           <span className="text-[10px] font-mono text-muted-foreground uppercase">
@@ -391,7 +391,7 @@ function EnclosedCandidates({ candidates, pickId, selectedId, onSelect }: { cand
             )}
           </span>
         </div>
-        <ScenarioComparison candidate={selected} />
+        <ScenarioComparison candidate={selected} jobName={jobName} pieces={pieces} rec={rec} containerId="selected-trailer-export-enclosed" />
         {selected.curbStacks.length > 0 && (
           <div className="pt-2">
             <CurbStackDiagram stacks={selected.curbStacks} maxHeightIn={selected.trailer.maxHeight} />
@@ -402,8 +402,9 @@ function EnclosedCandidates({ candidates, pickId, selectedId, onSelect }: { cand
   );
 }
 
-function OpenDeckCandidates({ candidates, pickId, selectedId, onSelect }: { candidates: Recommendation["candidates"]; pickId?: string; selectedId?: string; onSelect: (id: string) => void }) {
+function OpenDeckCandidates({ candidates, pickId, selectedId, onSelect, jobName, pieces, rec }: { candidates: Recommendation["candidates"]; pickId?: string; selectedId?: string; onSelect: (id: string) => void; jobName: string; pieces: Piece[]; rec: Recommendation }) {
   const list = candidates.filter((c) => ["hotshot-40", "flatbed-48", "conestoga-48", "stepdeck-53", "rgn-53"].includes(c.trailer.id));
+
   if (list.length === 0) return <p className="text-xs text-muted-foreground">No open-deck candidates.</p>;
   const selected = list.find((c) => c.trailer.id === selectedId) ?? list.find((c) => c.trailer.id === pickId) ?? list[0];
   return (
