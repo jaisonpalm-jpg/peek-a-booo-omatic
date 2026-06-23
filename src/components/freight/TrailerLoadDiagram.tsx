@@ -178,7 +178,7 @@ function Legend({
 
 /* ---------------- 2D top-down ---------------- */
 
-function TopDownView({ trailer, layout }: Props) {
+function TopDownView({ trailer, layout, centeredY }: Props & { centeredY: number[] }) {
   const PAD = 14;
   const targetW = 420;
   const totalLen = trailer.deckLength + trailer.maxOverhang;
