@@ -237,7 +237,7 @@ function TopDownView({ trailer, layout, centeredY }: Props & { centeredY: number
       {layout.placements.map((p, i) => {
         const c = COLORS[p.item.kind];
         const x = PAD + p.x * scale;
-        const y = PAD + p.y * widScale;
+        const y = PAD + (centeredY[i] ?? p.y) * widScale;
         const w = p.item.lengthIn * scale;
         const h = p.item.widthIn * widScale;
         const showPos = w > 18 && h > 10;
