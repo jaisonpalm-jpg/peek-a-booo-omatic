@@ -64,7 +64,8 @@ export function TrailerLoadDiagram({ trailer, layout }: Props) {
     cur.units += p.item.units;
     cur.weight += p.item.weightLb ?? 0;
     kindStats.set(p.item.kind, cur);
-  }
+
+  const centeredY = computeCenteredY(layout, trailer);
 
   return (
     <div className="space-y-3">
