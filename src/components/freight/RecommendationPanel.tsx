@@ -1,12 +1,16 @@
 import { useState } from "react";
-import { AlertTriangle, CheckCircle2, Truck } from "lucide-react";
-import type { Recommendation } from "@/lib/freight/types";
+import { AlertTriangle, CheckCircle2, Download, Truck } from "lucide-react";
+import type { Piece, Recommendation } from "@/lib/freight/types";
 import { CurbStackDiagram } from "./CurbStackDiagram";
 import { TrailerLoadDiagram } from "./TrailerLoadDiagram";
+import { exportTrailerPdf } from "@/lib/freight/exportTrailerPdf";
 
 interface RecommendationPanelProps {
   rec: Recommendation;
+  jobName?: string;
+  pieces?: Piece[];
 }
+
 
 function fmt(n: number, digits = 0): string {
   return n.toLocaleString(undefined, {
@@ -15,7 +19,7 @@ function fmt(n: number, digits = 0): string {
   });
 }
 
-export function RecommendationPanel({ rec }: RecommendationPanelProps) {
+export function RecommendationPanel({ rec, jobName = "", pieces = [] }: RecommendationPanelProps) {
   const { trailer, totals, oversize, withinLegalLimits, utilizationPct, deckAreaPct, alternates, candidates, notes, confidence, reason, splitShipment } = rec;
   const isSplit = !!splitShipment;
   const hasEnclosed = candidates.some((c) => ["box-16", "box-26", "dryvan-53"].includes(c.trailer.id));
