@@ -384,8 +384,11 @@ function IsoView({ trailer, layout, centeredY }: Props & { centeredY: number[] }
       ]
     : null;
 
+  const yByPlacement = new Map(
+    layout.placements.map((p, i) => [p, centeredY[i] ?? p.y] as const),
+  );
   const ordered = [...layout.placements].sort((a, b) => {
-    return (a.x + a.y) - (b.x + b.y);
+    return (a.x + (yByPlacement.get(a) ?? a.y)) - (b.x + (yByPlacement.get(b) ?? b.y));
   });
 
   return (
