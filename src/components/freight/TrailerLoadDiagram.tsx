@@ -96,6 +96,34 @@ function Legend({
           </span>
         ))}
       </div>
+
+      {layout.placements.length > 0 && (
+        <div className="border-t border-border pt-1.5">
+          <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
+            Items on deck
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-0.5 text-[10px] font-mono">
+            {layout.placements.map((p, i) => {
+              const c = COLORS[p.item.kind];
+              return (
+                <div key={i} className="flex items-center gap-1.5 min-w-0">
+                  <span
+                    className="inline-block size-2.5 border border-black/30 shrink-0"
+                    style={{ backgroundColor: c.flat }}
+                  />
+                  <span className="font-bold shrink-0">{p.posLabel ?? "—"}</span>
+                  {p.item.units > 1 && (
+                    <span className="text-muted-foreground shrink-0">×{p.item.units}</span>
+                  )}
+                  <span className="truncate text-foreground/80">
+                    {p.item.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] font-mono text-muted-foreground border-t border-border pt-1.5">
         <span>
           Deck <strong className="text-foreground">{trailer.deckLength / 12}&apos;</strong>
