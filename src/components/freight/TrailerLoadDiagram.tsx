@@ -23,6 +23,27 @@ function fmtLb(n: number): string {
   return `${Math.round(n)} lb`;
 }
 
+/**
+ * Compute a per-placement Y offset so that a piece sitting alone in its
+ * length-slot (no side-by-side neighbor along the trailer) is centered on
+ * the deck width — matching how a driver would actually stage a single
+ * piece down the centerline. Pieces that share length-range with another
+ * placement keep their original Y so side-by-side layouts stay intact.
+ */
+function computeCenteredY(layout: DeckLayout, trailer: TrailerSpec): number[] {
+  const ps = layout.placements;
+  return ps.map((p, i) => {
+    const hasNeighbor = ps.some((q, j) => {
+      if (i === j) return false;
+      const xOverlap =
+        p.x < q.x + q.item.lengthIn && q.x < p.x + p.item.lengthIn;
+      return xOverlap;
+    });
+    if (hasNeighbor) return p.y;
+    return Math.max(0, (trailer.deckWidth - p.item.widthIn) / 2);
+  });
+}
+
 export function TrailerLoadDiagram({ trailer, layout }: Props) {
   if (layout.placements.length === 0) {
     return (
