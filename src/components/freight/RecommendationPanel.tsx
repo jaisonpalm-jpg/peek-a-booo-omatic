@@ -208,10 +208,10 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
 
           <div className="p-4">
             {tab === "enclosed" && (
-              <EnclosedCandidates candidates={candidates} pickId={trailer?.id} />
+              <EnclosedCandidates candidates={candidates} pickId={trailer?.id} selectedId={selectedEnclosedId} onSelect={setSelectedEnclosedId} />
             )}
             {tab === "open" && (
-              <OpenDeckCandidates candidates={candidates} pickId={trailer?.id} />
+              <OpenDeckCandidates candidates={candidates} pickId={trailer?.id} selectedId={selectedOpenId} onSelect={setSelectedOpenId} />
             )}
           </div>
         </div>
