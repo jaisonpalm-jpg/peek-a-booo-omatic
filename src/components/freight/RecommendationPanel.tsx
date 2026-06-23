@@ -1,12 +1,16 @@
 import { useState } from "react";
-import { AlertTriangle, CheckCircle2, Truck } from "lucide-react";
-import type { Recommendation } from "@/lib/freight/types";
+import { AlertTriangle, CheckCircle2, Download, Truck } from "lucide-react";
+import type { Piece, Recommendation } from "@/lib/freight/types";
 import { CurbStackDiagram } from "./CurbStackDiagram";
 import { TrailerLoadDiagram } from "./TrailerLoadDiagram";
+import { exportTrailerPdf } from "@/lib/freight/exportTrailerPdf";
 
 interface RecommendationPanelProps {
   rec: Recommendation;
+  jobName?: string;
+  pieces?: Piece[];
 }
+
 
 function fmt(n: number, digits = 0): string {
   return n.toLocaleString(undefined, {
@@ -15,7 +19,7 @@ function fmt(n: number, digits = 0): string {
   });
 }
 
-export function RecommendationPanel({ rec }: RecommendationPanelProps) {
+export function RecommendationPanel({ rec, jobName = "", pieces = [] }: RecommendationPanelProps) {
   const { trailer, totals, oversize, withinLegalLimits, utilizationPct, deckAreaPct, alternates, candidates, notes, confidence, reason, splitShipment } = rec;
   const isSplit = !!splitShipment;
   const hasEnclosed = candidates.some((c) => ["box-16", "box-26", "dryvan-53"].includes(c.trailer.id));
@@ -208,11 +212,12 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
 
           <div className="p-4">
             {tab === "enclosed" && (
-              <EnclosedCandidates candidates={candidates} pickId={trailer?.id} selectedId={selectedEnclosedId} onSelect={setSelectedEnclosedId} />
+              <EnclosedCandidates candidates={candidates} pickId={trailer?.id} selectedId={selectedEnclosedId} onSelect={setSelectedEnclosedId} jobName={jobName} pieces={pieces} rec={rec} />
             )}
             {tab === "open" && (
-              <OpenDeckCandidates candidates={candidates} pickId={trailer?.id} selectedId={selectedOpenId} onSelect={setSelectedOpenId} />
+              <OpenDeckCandidates candidates={candidates} pickId={trailer?.id} selectedId={selectedOpenId} onSelect={setSelectedOpenId} jobName={jobName} pieces={pieces} rec={rec} />
             )}
+
           </div>
         </div>
       )}
@@ -322,7 +327,7 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
   );
 }
 
-function EnclosedCandidates({ candidates, pickId, selectedId, onSelect }: { candidates: Recommendation["candidates"]; pickId?: string; selectedId?: string; onSelect: (id: string) => void }) {
+function EnclosedCandidates({ candidates, pickId, selectedId, onSelect, jobName, pieces, rec }: { candidates: Recommendation["candidates"]; pickId?: string; selectedId?: string; onSelect: (id: string) => void; jobName: string; pieces: Piece[]; rec: Recommendation }) {
   const list = candidates.filter((c) => ["box-16", "box-26", "dryvan-53"].includes(c.trailer.id));
   if (list.length === 0) return <p className="text-xs text-muted-foreground">No enclosed candidates.</p>;
   const selected = list.find((c) => c.trailer.id === selectedId) ?? list.find((c) => c.trailer.id === pickId) ?? list[0];
@@ -376,7 +381,7 @@ function EnclosedCandidates({ candidates, pickId, selectedId, onSelect }: { cand
           );
         })}
       </div>
-      <div className="pt-2 space-y-3">
+      <div id="selected-trailer-export-enclosed" className="pt-2 space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-1">
           <p className="text-sm font-bold">{selected.trailer.name}</p>
           <span className="text-[10px] font-mono text-muted-foreground uppercase">
@@ -386,7 +391,7 @@ function EnclosedCandidates({ candidates, pickId, selectedId, onSelect }: { cand
             )}
           </span>
         </div>
-        <ScenarioComparison candidate={selected} />
+        <ScenarioComparison candidate={selected} jobName={jobName} pieces={pieces} rec={rec} containerId="selected-trailer-export-enclosed" />
         {selected.curbStacks.length > 0 && (
           <div className="pt-2">
             <CurbStackDiagram stacks={selected.curbStacks} maxHeightIn={selected.trailer.maxHeight} />
@@ -397,8 +402,9 @@ function EnclosedCandidates({ candidates, pickId, selectedId, onSelect }: { cand
   );
 }
 
-function OpenDeckCandidates({ candidates, pickId, selectedId, onSelect }: { candidates: Recommendation["candidates"]; pickId?: string; selectedId?: string; onSelect: (id: string) => void }) {
+function OpenDeckCandidates({ candidates, pickId, selectedId, onSelect, jobName, pieces, rec }: { candidates: Recommendation["candidates"]; pickId?: string; selectedId?: string; onSelect: (id: string) => void; jobName: string; pieces: Piece[]; rec: Recommendation }) {
   const list = candidates.filter((c) => ["hotshot-40", "flatbed-48", "conestoga-48", "stepdeck-53", "rgn-53"].includes(c.trailer.id));
+
   if (list.length === 0) return <p className="text-xs text-muted-foreground">No open-deck candidates.</p>;
   const selected = list.find((c) => c.trailer.id === selectedId) ?? list.find((c) => c.trailer.id === pickId) ?? list[0];
   return (
@@ -451,7 +457,7 @@ function OpenDeckCandidates({ candidates, pickId, selectedId, onSelect }: { cand
           );
         })}
       </div>
-      <div className="space-y-3 pt-2">
+      <div id="selected-trailer-export-open" className="space-y-3 pt-2">
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
           Recommended Load Layout — Compare Packing Scenarios
         </p>
@@ -471,7 +477,7 @@ function OpenDeckCandidates({ candidates, pickId, selectedId, onSelect }: { cand
               )}
             </span>
           </div>
-          <ScenarioComparison candidate={selected} />
+          <ScenarioComparison candidate={selected} jobName={jobName} pieces={pieces} rec={rec} containerId="selected-trailer-export-open" />
           {selected.curbStacks.length > 0 && (
             <div className="pt-2">
               <CurbStackDiagram stacks={selected.curbStacks} maxHeightIn={selected.trailer.maxHeight} />
@@ -479,16 +485,36 @@ function OpenDeckCandidates({ candidates, pickId, selectedId, onSelect }: { cand
           )}
         </div>
       </div>
+
     </div>
   );
 }
 
-function ScenarioComparison({ candidate }: { candidate: Recommendation["candidates"][number] }) {
+function ScenarioComparison({ candidate, jobName, pieces, rec, containerId }: { candidate: Recommendation["candidates"][number]; jobName: string; pieces: Piece[]; rec: Recommendation; containerId: string }) {
   const scenarios = candidate.scenarios.length > 0
     ? candidate.scenarios
     : [{ id: "balanced" as const, name: "Balanced", description: "", layout: candidate.layout, extraGasketPallets: 0 }];
   const [active, setActive] = useState<string>(scenarios[0].id);
   const current = scenarios.find((s) => s.id === active) ?? scenarios[0];
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      await exportTrailerPdf({
+        jobName,
+        pieces,
+        rec,
+        candidate,
+        scenarioName: current.name,
+        diagramContainerId: containerId,
+      });
+    } catch (err) {
+      console.error("Failed to export trailer PDF", err);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   return (
     <div className="space-y-3">
@@ -542,9 +568,21 @@ function ScenarioComparison({ candidate }: { candidate: Recommendation["candidat
       </div>
       <p className="text-[11px] text-muted-foreground italic">{current.description}</p>
       <TrailerLoadDiagram trailer={candidate.trailer} layout={current.layout} />
+      <div className="flex justify-end pt-1">
+        <button
+          type="button"
+          onClick={handleDownload}
+          disabled={downloading || pieces.length === 0}
+          className="inline-flex items-center gap-2 text-xs font-bold py-2.5 px-4 bg-rule text-background uppercase tracking-widest hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <Download className="size-3.5" />
+          {downloading ? "Generating…" : "Download Trailer Report (PDF)"}
+        </button>
+      </div>
     </div>
   );
 }
+
 
 function Stat({ label, value, unit }: { label: string; value: string; unit: string }) {
   return (
