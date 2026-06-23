@@ -21,6 +21,12 @@ export function RecommendationPanel({ rec }: RecommendationPanelProps) {
   const hasEnclosed = candidates.some((c) => ["box-16", "box-26", "dryvan-53"].includes(c.trailer.id));
   const hasEnclosedFit = candidates.some((c) => c.fits && ["box-16", "box-26", "dryvan-53"].includes(c.trailer.id));
   const [tab, setTab] = useState<"enclosed" | "open">(hasEnclosedFit ? "enclosed" : "open");
+  const [selectedEnclosedId, setSelectedEnclosedId] = useState<string | undefined>(
+    trailer && ["box-16", "box-26", "dryvan-53"].includes(trailer.id) ? trailer.id : candidates.find((c) => ["box-16", "box-26", "dryvan-53"].includes(c.trailer.id) && c.fits)?.trailer.id ?? candidates.find((c) => ["box-16", "box-26", "dryvan-53"].includes(c.trailer.id))?.trailer.id,
+  );
+  const [selectedOpenId, setSelectedOpenId] = useState<string | undefined>(
+    trailer && ["hotshot-40", "flatbed-48", "conestoga-48", "stepdeck-53", "rgn-53"].includes(trailer.id) ? trailer.id : candidates.find((c) => ["hotshot-40", "flatbed-48", "conestoga-48", "stepdeck-53", "rgn-53"].includes(c.trailer.id) && c.fits)?.trailer.id ?? candidates.find((c) => ["hotshot-40", "flatbed-48", "conestoga-48", "stepdeck-53", "rgn-53"].includes(c.trailer.id))?.trailer.id,
+  );
 
   return (
     <div className="space-y-6">
