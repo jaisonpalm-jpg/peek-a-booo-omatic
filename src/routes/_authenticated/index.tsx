@@ -300,7 +300,7 @@ function EstimatorPage() {
                     </p>
                   </div>
                 </div>
-                <RecommendationPanel rec={rec} />
+                <RecommendationPanel rec={rec} jobName={jobName} pieces={pieces} />
               </section>
 
               <ManualSplitConfigurator
