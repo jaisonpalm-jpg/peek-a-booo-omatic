@@ -244,7 +244,7 @@ export async function exportTrailerPdf({
     // Confidence bar
     let by = y + bodyPadding;
     const trackW = barW - bodyPadding * 2;
-    doc.setFillColor(235);
+    doc.setFillColor(235, 235, 235);
     doc.rect(barX + bodyPadding, by, trackW, 6, "F");
     if (conf >= 80) doc.setFillColor(22, 163, 74);
     else if (conf >= 60) doc.setFillColor(37, 99, 235);
