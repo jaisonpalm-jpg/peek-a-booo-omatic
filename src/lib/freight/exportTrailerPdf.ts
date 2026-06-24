@@ -182,6 +182,100 @@ export async function exportTrailerPdf({
   );
   y += 92 + 14;
 
+  // Confidence section
+  {
+    const conf = Math.round(rec.confidence);
+    const barX = marginX;
+    const barW = pageW - marginX * 2;
+    const headerH = 18;
+    // Header
+    doc.setFillColor(24, 24, 27);
+    doc.rect(barX, y, barW, headerH, "F");
+    doc.setTextColor(255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.text("CONFIDENCE", barX + 10, y + 12);
+    doc.text(`${conf}%`, barX + barW - 10, y + 12, { align: "right" });
+    y += headerH;
+    // Body box
+    const reasonLines = doc.splitTextToSize(
+      rec.reason || "—",
+      barW - 20,
+    ) as string[];
+    // Build factor breakdown (mirrors recommend.ts confidence math)
+    const best = candidate;
+    const factors: Array<[string, string]> = [];
+    factors.push(["Base score", "100"]);
+    if (rec.totals.pieces === 0) {
+      factors.push(["No pieces entered", "→ 0"]);
+    } else if (!rec.trailer) {
+      factors.push(["No standard trailer fits load", "→ 25"]);
+    } else {
+      if (rec.oversize.length > 0) {
+        const pen = Math.min(30, rec.oversize.length * 10);
+        factors.push([
+          `${rec.oversize.length} oversize flag${rec.oversize.length === 1 ? "" : "s"} (permits required)`,
+          `−${pen}`,
+        ]);
+      }
+      if (best.utilizationPct > 95) {
+        factors.push([
+          `Deck length ${Math.round(best.utilizationPct)}% utilized (tight fit)`,
+          "−10",
+        ]);
+      }
+      if (best.deckAreaPct > 95) {
+        factors.push([
+          `Floor area ${Math.round(best.deckAreaPct)}% occupied`,
+          "−10",
+        ]);
+      }
+    }
+    factors.push(["Final confidence", `${conf}%`]);
+
+    const bodyPadding = 10;
+    const reasonBlockH = reasonLines.length * 11 + 4;
+    const barRowH = 14;
+    const factorsH = factors.length * 12 + 6;
+    const bodyH = bodyPadding * 2 + reasonBlockH + barRowH + factorsH;
+    doc.setDrawColor(220);
+    doc.setLineWidth(0.5);
+    doc.rect(barX, y, barW, bodyH);
+    // Confidence bar
+    let by = y + bodyPadding;
+    const trackW = barW - bodyPadding * 2;
+    doc.setFillColor(235, 235, 235);
+    doc.rect(barX + bodyPadding, by, trackW, 6, "F");
+    if (conf >= 80) doc.setFillColor(22, 163, 74);
+    else if (conf >= 60) doc.setFillColor(37, 99, 235);
+    else doc.setFillColor(217, 119, 6);
+    doc.rect(barX + bodyPadding, by, (trackW * conf) / 100, 6, "F");
+    by += barRowH;
+    // Reason
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(60);
+    doc.text(reasonLines, barX + bodyPadding, by + 8);
+    by += reasonBlockH;
+    // Factor breakdown
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.setTextColor(120);
+    doc.text("HOW THIS IS CALCULATED", barX + bodyPadding, by + 2);
+    by += 8;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(40);
+    factors.forEach(([label, val], i) => {
+      const ly = by + i * 12 + 8;
+      doc.text(label, barX + bodyPadding, ly);
+      doc.setFont("helvetica", "bold");
+      doc.text(val, barX + barW - bodyPadding, ly, { align: "right" });
+      doc.setFont("helvetica", "normal");
+    });
+    y += bodyH + 14;
+  }
+
   // Trailer specs grid
   const t = candidate.trailer;
   const layout = candidate.scenarios.find((s) => s.name === scenarioName)?.layout ?? candidate.layout;
