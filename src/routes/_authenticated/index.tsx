@@ -63,6 +63,59 @@ function EstimatorPage() {
   const [shareLoading, setShareLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  const [userId, setUserId] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
+  }, []);
+
+  const validPieces = pieces.filter((p) => p.qty > 0 && p.length > 0);
+  const missingWeights = validPieces.some((p) => !p.weight);
+  const [weightBannerDismissed, setWeightBannerDismissed] = useState(false);
+  useEffect(() => {
+    setWeightBannerDismissed(false);
+  }, [pieces]);
+
+  const handleSaveToLibrary = useCallback(
+    async (piece: Piece) => {
+      if (!userId) {
+        toast.error("Sign-in required to save units");
+        return;
+      }
+      const desc = (piece.description || "Unnamed unit").trim();
+      const lower = desc.toLowerCase();
+      const category: LibraryUnit["category"] = /curb|adapter/.test(lower)
+        ? "Curb"
+        : /pipe|duct|spiral/.test(lower)
+          ? "Pipe"
+          : /rtu/.test(lower)
+            ? "RTU"
+            : /ahu|air handler/.test(lower)
+              ? "AHU"
+              : /condenser/.test(lower)
+                ? "Condenser"
+                : /gasket|accessory/.test(lower)
+                  ? "Accessory"
+                  : "Other";
+      try {
+        await saveLibraryUnit(userId, {
+          id: crypto.randomUUID(),
+          name: desc,
+          category,
+          length: piece.length,
+          width: piece.width,
+          height: piece.height,
+          weight: piece.weight,
+          insulated: piece.insulated,
+          createdAt: Date.now(),
+        });
+        toast.success("Saved to Unit Library");
+      } catch (err) {
+        toast.error((err as Error).message ?? "Save failed");
+      }
+    },
+    [userId],
+  );
+
   const setPieces = (next: Piece[] | ((prev: Piece[]) => Piece[])) => {
     if (!activeJob) return;
     const resolved = typeof next === "function" ? next(activeJob.pieces) : next;
