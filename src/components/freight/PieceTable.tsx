@@ -246,7 +246,18 @@ export function PieceTable({ pieces, onChange, onSaveToLibrary }: PieceTableProp
                       {ORIENTATION_LABEL[p.orientation]}
                     </button>
                   </td>
-                  <td className="px-2 py-1.5 text-right">
+                  <td className="px-2 py-1.5 text-right whitespace-nowrap">
+                    {onSaveToLibrary && (
+                      <button
+                        type="button"
+                        onClick={() => onSaveToLibrary(p)}
+                        aria-label="Save to library"
+                        title="Save to Unit Library"
+                        className="size-8 inline-flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors text-muted-foreground"
+                      >
+                        <BookmarkPlus className="size-4" />
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => remove(p.id)}
