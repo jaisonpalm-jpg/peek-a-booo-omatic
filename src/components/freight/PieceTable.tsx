@@ -36,7 +36,7 @@ function pieceFlags(p: Piece): string[] {
   return flags;
 }
 
-export function PieceTable({ pieces, onChange }: PieceTableProps) {
+export function PieceTable({ pieces, onChange, onSaveToLibrary }: PieceTableProps) {
   function update(id: string, patch: Partial<Piece>) {
     onChange(pieces.map((p) => (p.id === id ? { ...p, ...patch } : p)));
   }
