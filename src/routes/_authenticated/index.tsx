@@ -1,20 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useMemo, useState } from "react";
-import { Download, LogOut, Link2, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Download, LogOut, Link2, Loader2, AlertTriangle, X } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import { PieceTable } from "@/components/freight/PieceTable";
 import { RecommendationPanel } from "@/components/freight/RecommendationPanel";
 import { ScanSheetButton } from "@/components/freight/ScanSheetButton";
 import { JobsSidebar } from "@/components/freight/JobsSidebar";
 import { ManualSplitConfigurator } from "@/components/freight/ManualSplitConfigurator";
 import { QuickAddPieces } from "@/components/freight/QuickAddPieces";
+import { UnitLibrary } from "@/components/freight/UnitLibrary";
 import { Link } from "@tanstack/react-router";
 import { Zap } from "lucide-react";
 
 import { recommend } from "@/lib/freight/recommend";
 import { exportLoadSummaryPdf } from "@/lib/freight/exportPdf";
 import { useJobs } from "@/lib/freight/jobsStore";
-import type { Piece } from "@/lib/freight/types";
+import type { LibraryUnit, Piece } from "@/lib/freight/types";
+import { saveLibraryUnit } from "@/lib/freight/unitLibrary";
 import { supabase } from "@/integrations/supabase/client";
 import { createShareLink } from "@/lib/share.functions";
 
@@ -59,6 +62,59 @@ function EstimatorPage() {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const [userId, setUserId] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
+  }, []);
+
+  const validPieces = pieces.filter((p) => p.qty > 0 && p.length > 0);
+  const missingWeights = validPieces.some((p) => !p.weight);
+  const [weightBannerDismissed, setWeightBannerDismissed] = useState(false);
+  useEffect(() => {
+    setWeightBannerDismissed(false);
+  }, [pieces]);
+
+  const handleSaveToLibrary = useCallback(
+    async (piece: Piece) => {
+      if (!userId) {
+        toast.error("Sign-in required to save units");
+        return;
+      }
+      const desc = (piece.description || "Unnamed unit").trim();
+      const lower = desc.toLowerCase();
+      const category: LibraryUnit["category"] = /curb|adapter/.test(lower)
+        ? "Curb"
+        : /pipe|duct|spiral/.test(lower)
+          ? "Pipe"
+          : /rtu/.test(lower)
+            ? "RTU"
+            : /ahu|air handler/.test(lower)
+              ? "AHU"
+              : /condenser/.test(lower)
+                ? "Condenser"
+                : /gasket|accessory/.test(lower)
+                  ? "Accessory"
+                  : "Other";
+      try {
+        await saveLibraryUnit(userId, {
+          id: crypto.randomUUID(),
+          name: desc,
+          category,
+          length: piece.length,
+          width: piece.width,
+          height: piece.height,
+          weight: piece.weight,
+          insulated: piece.insulated,
+          createdAt: Date.now(),
+        });
+        toast.success("Saved to Unit Library");
+      } catch (err) {
+        toast.error((err as Error).message ?? "Save failed");
+      }
+    },
+    [userId],
+  );
 
   const setPieces = (next: Piece[] | ((prev: Piece[]) => Piece[])) => {
     if (!activeJob) return;
@@ -244,8 +300,34 @@ function EstimatorPage() {
                   showWeight
                 />
 
-                <PieceTable pieces={pieces} onChange={setPieces} />
+                <UnitLibrary
+                  onAddPieces={(added) => setPieces((prev) => [...prev, ...added])}
+                />
+
+                <PieceTable
+                  pieces={pieces}
+                  onChange={setPieces}
+                  onSaveToLibrary={handleSaveToLibrary}
+                />
               </section>
+
+              {missingWeights && !weightBannerDismissed && validPieces.length > 0 && (
+                <div className="bg-warning-soft ring-2 ring-warning/40 p-3 flex items-start gap-3">
+                  <AlertTriangle className="size-4 text-warning shrink-0 mt-0.5" />
+                  <p className="flex-1 text-xs leading-snug">
+                    Some pieces are missing weight. Add weights for accurate payload
+                    and axle load calculations.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setWeightBannerDismissed(true)}
+                    aria-label="Dismiss"
+                    className="size-6 inline-flex items-center justify-center text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </div>
+              )}
 
               <section className="space-y-6">
                 <div className="inline-flex items-center gap-2 bg-rule text-background px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em]">

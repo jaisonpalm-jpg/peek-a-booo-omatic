@@ -47,9 +47,36 @@ export interface TrailerSpec {
   maxHeight: number;
   /** Max rear overhang allowed (federal default) in INCHES */
   maxOverhang: number;
+  /** Maximum cargo weight in POUNDS. */
+  maxPayloadLb: number;
   /** True for enclosed trailers (height = interior); false for flatbeds */
   enclosed: boolean;
   description: string;
+}
+
+export type UnitCategory =
+  | "RTU"
+  | "AHU"
+  | "Condenser"
+  | "Curb"
+  | "Pipe"
+  | "Accessory"
+  | "Other";
+
+export interface LibraryUnit {
+  id: string;
+  name: string;
+  category: UnitCategory;
+  /** inches */
+  length: number;
+  width: number;
+  height: number;
+  /** pounds per unit */
+  weight?: number;
+  insulated?: boolean;
+  notes?: string;
+  /** unix ms */
+  createdAt: number;
 }
 
 export interface OversizeFlag {

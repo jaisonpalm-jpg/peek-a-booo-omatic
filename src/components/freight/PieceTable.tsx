@@ -1,4 +1,4 @@
-import { Plus, Trash2, RotateCw } from "lucide-react";
+import { Plus, Trash2, RotateCw, BookmarkPlus } from "lucide-react";
 import type { Orientation, Piece } from "@/lib/freight/types";
 import { effectiveDims } from "@/lib/freight/recommend";
 import { FEDERAL_LIMITS } from "@/lib/freight/trailers";
@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 interface PieceTableProps {
   pieces: Piece[];
   onChange: (pieces: Piece[]) => void;
+  /** When provided, each row shows a Save-to-Library button. */
+  onSaveToLibrary?: (piece: Piece) => void;
 }
 
 const ORIENTATION_LABEL: Record<Orientation, string> = {
@@ -34,7 +36,7 @@ function pieceFlags(p: Piece): string[] {
   return flags;
 }
 
-export function PieceTable({ pieces, onChange }: PieceTableProps) {
+export function PieceTable({ pieces, onChange, onSaveToLibrary }: PieceTableProps) {
   function update(id: string, patch: Partial<Piece>) {
     onChange(pieces.map((p) => (p.id === id ? { ...p, ...patch } : p)));
   }
@@ -88,6 +90,17 @@ export function PieceTable({ pieces, onChange }: PieceTableProps) {
                   maxLength={120}
                   className="flex-1 bg-secondary px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-rule"
                 />
+                {onSaveToLibrary && (
+                  <button
+                    type="button"
+                    onClick={() => onSaveToLibrary(p)}
+                    aria-label="Save to library"
+                    title="Save to Unit Library"
+                    className="size-10 shrink-0 inline-flex items-center justify-center bg-secondary text-muted-foreground active:bg-primary active:text-primary-foreground"
+                  >
+                    <BookmarkPlus className="size-4" />
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => remove(p.id)}
@@ -233,7 +246,18 @@ export function PieceTable({ pieces, onChange }: PieceTableProps) {
                       {ORIENTATION_LABEL[p.orientation]}
                     </button>
                   </td>
-                  <td className="px-2 py-1.5 text-right">
+                  <td className="px-2 py-1.5 text-right whitespace-nowrap">
+                    {onSaveToLibrary && (
+                      <button
+                        type="button"
+                        onClick={() => onSaveToLibrary(p)}
+                        aria-label="Save to library"
+                        title="Save to Unit Library"
+                        className="size-8 inline-flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors text-muted-foreground"
+                      >
+                        <BookmarkPlus className="size-4" />
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => remove(p.id)}

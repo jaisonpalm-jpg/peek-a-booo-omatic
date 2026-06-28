@@ -179,6 +179,39 @@ export function RecommendationPanel({ rec, jobName = "", pieces = [] }: Recommen
                 />
               </div>
             </div>
+            {totals.weightLb > 0 && (() => {
+              const weightPct = (totals.weightLb / trailer.maxPayloadLb) * 100;
+              const tone =
+                weightPct > 100
+                  ? "text-destructive"
+                  : weightPct > 90
+                    ? "text-warning"
+                    : "text-foreground";
+              const barTone =
+                weightPct > 100
+                  ? "bg-destructive"
+                  : weightPct > 90
+                    ? "bg-warning"
+                    : "bg-success";
+              return (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Weight Capacity
+                    </span>
+                    <span className={`text-sm font-mono font-bold ${tone}`}>
+                      {fmt(totals.weightLb)} / {fmt(trailer.maxPayloadLb)} lb · {Math.round(weightPct)}%
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-secondary overflow-hidden">
+                    <div
+                      className={`h-full transition-all ${barTone}`}
+                      style={{ width: `${Math.min(100, weightPct)}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>

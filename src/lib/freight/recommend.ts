@@ -393,10 +393,19 @@ function buildDeckItems(
     });
   }
 
-  // Gasket pallets are an ACCESSORY — they ship alongside but do not drive
-  // trailer length sizing. Intentionally omitted from the deck layout so
-  // they don't inflate linear-ft or overhang figures.
-
+  // Gasket pallets — accessory freight, but participate in the deck layout
+  // so they show on the diagram. Each pallet is a 48"L × 40"W block ~101" tall.
+  const palletCount = boxes.gasketPallets + Math.max(0, _extraGasketPallets);
+  for (let i = 0; i < palletCount; i++) {
+    items.push({
+      kind: "gasket-pallet",
+      label: `Gasket Pallet ×1`,
+      lengthIn: PALLET_L,
+      widthIn: PALLET_W,
+      heightIn: GASKET_PALLET_HEIGHT_IN,
+      units: 1,
+    });
+  }
 
 
   return items;
@@ -436,14 +445,29 @@ function packDeckLayout(
   const maxLen = trailer.deckLength + trailer.maxOverhang;
   const buffer = SEPARATION_IN;
 
+  // Weight-forward bias: within each strategy, heavier items break ties so
+  // they load toward the nose of the trailer (over the drive axles).
+  const wt = (it: DeckItem) => it.weightLb ?? 0;
   const sorted = [...items].sort((a, b) => {
     if (strategy === "shortest-first") {
-      return a.lengthIn - b.lengthIn || a.widthIn - b.widthIn;
+      return (
+        a.lengthIn - b.lengthIn ||
+        a.widthIn - b.widthIn ||
+        wt(b) - wt(a)
+      );
     }
     if (strategy === "widest-first") {
-      return b.widthIn - a.widthIn || b.lengthIn - a.lengthIn;
+      return (
+        b.widthIn - a.widthIn ||
+        b.lengthIn - a.lengthIn ||
+        wt(b) - wt(a)
+      );
     }
-    return b.lengthIn - a.lengthIn || b.widthIn - a.widthIn;
+    return (
+      b.lengthIn - a.lengthIn ||
+      b.widthIn - a.widthIn ||
+      wt(b) - wt(a)
+    );
   });
 
   let cursorX = 0;
@@ -635,9 +659,10 @@ function floorAreaIn2(
     const bottom = s.layers[0];
     area += withSeparation(bottom.length, bottom.width);
   }
-  // Filler boxes ride loose, stacked 2 high. Gasket pallets are accessory
-  // freight and excluded from order length sizing.
+  // Filler boxes ride loose, stacked 2 high. Gasket pallets DO occupy deck
+  // footprint (one 48x40 pallet each) so utilization reflects reality.
   area += (boxes.fillerBoxes * BOX_FOOTPRINT_IN2) / BOX_STACK;
+  area += withSeparation(PALLET_L, PALLET_W) * boxes.gasketPallets;
 
   return area;
 }
@@ -923,23 +948,28 @@ function evaluateTrailerLoad(
     0,
   );
   const tallest = pieces.reduce((m, p) => Math.max(m, effectiveDims(p).height), 0);
+  const totalWeight = pieces.reduce((s, p) => s + (p.weight ?? 0) * p.qty, 0);
+  const fitsWeight = totalWeight === 0 || totalWeight <= trailer.maxPayloadLb;
   const fits =
     layout.fits &&
     linearIn <= trailer.deckLength &&
     longest <= trailer.deckLength + trailer.maxOverhang &&
     widestNonCurb <= trailer.deckWidth &&
-    tallest <= trailer.maxHeight;
+    tallest <= trailer.maxHeight &&
+    fitsWeight;
   const deckArea = trailer.deckLength * trailer.deckWidth;
   const linearOverage = Math.max(0, linearIn - trailer.deckLength);
   const lengthOverage = Math.max(0, longest - trailer.deckLength - trailer.maxOverhang);
   const widthOverage = Math.max(0, widestNonCurb - trailer.deckWidth);
   const heightOverage = Math.max(0, tallest - trailer.maxHeight);
+  const weightOverage = Math.max(0, totalWeight - trailer.maxPayloadLb);
   const overageScore =
     layout.unplacedCount * 100_000 +
     linearOverage * 100 +
     lengthOverage * 100 +
     widthOverage * 500 +
     heightOverage * 500 +
+    weightOverage * 10 +
     layout.totalOverhangIn;
 
   return {
@@ -1145,21 +1175,28 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
       );
       const fitsWidth = widestNonCurbIn <= t.deckWidth;
       const fitsHeight = tallestIn <= t.maxHeight;
-      const fits = fitsLength && fitsWidth && fitsHeight && layout.fits;
+      const candidateWeightLb = validPieces.reduce(
+        (s, p) => s + (p.weight ?? 0) * p.qty,
+        0,
+      );
+      const fitsWeight = candidateWeightLb === 0 || candidateWeightLb <= t.maxPayloadLb;
+      const fits = fitsLength && fitsWidth && fitsHeight && fitsWeight && layout.fits;
       const linearOverage = Math.max(0, linearIn - t.deckLength);
       const lengthOverage = Math.max(0, longestLoose - t.deckLength - t.maxOverhang);
       const widthOverage = Math.max(0, widestNonCurbIn - t.deckWidth);
       const heightOverage = Math.max(0, tallestIn - t.maxHeight);
+      const weightOverage = Math.max(0, candidateWeightLb - t.maxPayloadLb);
       const overageScore =
         layout.unplacedCount * 100_000 +
         linearOverage * 100 +
         lengthOverage * 100 +
         widthOverage * 500 +
         heightOverage * 500 +
+        weightOverage * 10 +
         layout.totalOverhangIn;
       const utilizationPct = t.deckLength > 0 ? Math.min(100, (linearIn / t.deckLength) * 100) : 0;
       const deckAreaPct = deckArea > 0 ? Math.min(100, (needed / deckArea) * 100) : 0;
-      return { trailer: t, fits, linearFt: linearIn / 12, utilizationPct, deckAreaPct, neededIn2: needed, curbStacks, layout, scenarios, overageScore };
+      return { trailer: t, fits, fitsWeight, weightOverage, linearFt: linearIn / 12, utilizationPct, deckAreaPct, neededIn2: needed, curbStacks, layout, scenarios, overageScore };
     })
     .sort((a, b) => {
       if (a.fits !== b.fits) return a.fits ? -1 : 1;
@@ -1208,16 +1245,44 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
     notes.push("Add at least one piece to see a recommendation.");
   }
   const splitShipment = !best ? splitTwoTrucks(validPieces, maxCurbStack) ?? undefined : undefined;
+
+  // Weight-driven notes per candidate.
+  const allFailWeight =
+    candidates.length > 0 &&
+    candidates.every((c) => !c.fitsWeight) &&
+    totalWeightLb > 0;
+  for (const c of candidates) {
+    if (!c.fitsWeight && c.weightOverage > 0) {
+      notes.push(
+        `Weight exceeds ${c.trailer.shortName} payload limit (${Math.round(totalWeightLb).toLocaleString()}lb / ${c.trailer.maxPayloadLb.toLocaleString()}lb max). Consider splitting the load.`,
+      );
+    }
+  }
+
   if (!best && validPieces.length > 0) {
     if (splitShipment) {
       const [a, b] = splitShipment.trucks;
+      const why = allFailWeight
+        ? "Load too heavy for any single truck"
+        : "Order too large for one truck";
       notes.push(
-        `Order too large for one truck — recommend splitting across 2 trucks: ${a.trailer.name} + ${b.trailer.name}.`,
+        `${why} — recommend splitting across 2 trucks: ${a.trailer.name} + ${b.trailer.name}.`,
       );
     } else {
       notes.push("Load exceeds the largest standard equipment, even split across two trucks — specialized transport required.");
     }
   }
+
+  // If the best layout couldn't place every gasket pallet, surface it.
+  if (best && boxes.gasketPallets > 0) {
+    const placedPallets = best.layout.placements.filter(
+      (p) => p.item.kind === "gasket-pallet",
+    ).length;
+    if (placedPallets < boxes.gasketPallets) {
+      notes.push("Gasket pallets could not fit on the selected trailer. Ship separately.");
+    }
+  }
+
   if (boxes.fillerBoxes > 0) {
     notes.push(`${boxes.fillerBoxes} packing box${boxes.fillerBoxes === 1 ? "" : "es"} (36"x36"x24") estimated, stacked 2 high.`);
   }
