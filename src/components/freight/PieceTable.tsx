@@ -1,4 +1,4 @@
-import { Plus, Trash2, RotateCw } from "lucide-react";
+import { Plus, Trash2, RotateCw, BookmarkPlus } from "lucide-react";
 import type { Orientation, Piece } from "@/lib/freight/types";
 import { effectiveDims } from "@/lib/freight/recommend";
 import { FEDERAL_LIMITS } from "@/lib/freight/trailers";
@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 interface PieceTableProps {
   pieces: Piece[];
   onChange: (pieces: Piece[]) => void;
+  /** When provided, each row shows a Save-to-Library button. */
+  onSaveToLibrary?: (piece: Piece) => void;
 }
 
 const ORIENTATION_LABEL: Record<Orientation, string> = {
