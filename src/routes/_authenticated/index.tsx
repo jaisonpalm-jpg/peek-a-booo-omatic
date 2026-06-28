@@ -300,8 +300,34 @@ function EstimatorPage() {
                   showWeight
                 />
 
-                <PieceTable pieces={pieces} onChange={setPieces} />
+                <UnitLibrary
+                  onAddPieces={(added) => setPieces((prev) => [...prev, ...added])}
+                />
+
+                <PieceTable
+                  pieces={pieces}
+                  onChange={setPieces}
+                  onSaveToLibrary={handleSaveToLibrary}
+                />
               </section>
+
+              {missingWeights && !weightBannerDismissed && validPieces.length > 0 && (
+                <div className="bg-warning-soft ring-2 ring-warning/40 p-3 flex items-start gap-3">
+                  <AlertTriangle className="size-4 text-warning shrink-0 mt-0.5" />
+                  <p className="flex-1 text-xs leading-snug">
+                    Some pieces are missing weight. Add weights for accurate payload
+                    and axle load calculations.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setWeightBannerDismissed(true)}
+                    aria-label="Dismiss"
+                    className="size-6 inline-flex items-center justify-center text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </div>
+              )}
 
               <section className="space-y-6">
                 <div className="inline-flex items-center gap-2 bg-rule text-background px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em]">
