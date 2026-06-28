@@ -1174,21 +1174,28 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
       );
       const fitsWidth = widestNonCurbIn <= t.deckWidth;
       const fitsHeight = tallestIn <= t.maxHeight;
-      const fits = fitsLength && fitsWidth && fitsHeight && layout.fits;
+      const candidateWeightLb = validPieces.reduce(
+        (s, p) => s + (p.weight ?? 0) * p.qty,
+        0,
+      );
+      const fitsWeight = candidateWeightLb === 0 || candidateWeightLb <= t.maxPayloadLb;
+      const fits = fitsLength && fitsWidth && fitsHeight && fitsWeight && layout.fits;
       const linearOverage = Math.max(0, linearIn - t.deckLength);
       const lengthOverage = Math.max(0, longestLoose - t.deckLength - t.maxOverhang);
       const widthOverage = Math.max(0, widestNonCurbIn - t.deckWidth);
       const heightOverage = Math.max(0, tallestIn - t.maxHeight);
+      const weightOverage = Math.max(0, candidateWeightLb - t.maxPayloadLb);
       const overageScore =
         layout.unplacedCount * 100_000 +
         linearOverage * 100 +
         lengthOverage * 100 +
         widthOverage * 500 +
         heightOverage * 500 +
+        weightOverage * 10 +
         layout.totalOverhangIn;
       const utilizationPct = t.deckLength > 0 ? Math.min(100, (linearIn / t.deckLength) * 100) : 0;
       const deckAreaPct = deckArea > 0 ? Math.min(100, (needed / deckArea) * 100) : 0;
-      return { trailer: t, fits, linearFt: linearIn / 12, utilizationPct, deckAreaPct, neededIn2: needed, curbStacks, layout, scenarios, overageScore };
+      return { trailer: t, fits, fitsWeight, weightOverage, linearFt: linearIn / 12, utilizationPct, deckAreaPct, neededIn2: needed, curbStacks, layout, scenarios, overageScore };
     })
     .sort((a, b) => {
       if (a.fits !== b.fits) return a.fits ? -1 : 1;
