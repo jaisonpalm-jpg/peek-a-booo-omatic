@@ -395,7 +395,8 @@ function buildDeckItems(
 
   // Gasket pallets — accessory freight, but participate in the deck layout
   // so they show on the diagram. Each pallet is a 48"L × 40"W block ~101" tall.
-  for (let i = 0; i < boxes.gasketPallets; i++) {
+  const palletCount = boxes.gasketPallets + Math.max(0, _extraGasketPallets);
+  for (let i = 0; i < palletCount; i++) {
     items.push({
       kind: "gasket-pallet",
       label: `Gasket Pallet ×1`,
