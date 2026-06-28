@@ -658,9 +658,10 @@ function floorAreaIn2(
     const bottom = s.layers[0];
     area += withSeparation(bottom.length, bottom.width);
   }
-  // Filler boxes ride loose, stacked 2 high. Gasket pallets are accessory
-  // freight and excluded from order length sizing.
+  // Filler boxes ride loose, stacked 2 high. Gasket pallets DO occupy deck
+  // footprint (one 48x40 pallet each) so utilization reflects reality.
   area += (boxes.fillerBoxes * BOX_FOOTPRINT_IN2) / BOX_STACK;
+  area += withSeparation(PALLET_L, PALLET_W) * boxes.gasketPallets;
 
   return area;
 }
@@ -946,23 +947,28 @@ function evaluateTrailerLoad(
     0,
   );
   const tallest = pieces.reduce((m, p) => Math.max(m, effectiveDims(p).height), 0);
+  const totalWeight = pieces.reduce((s, p) => s + (p.weight ?? 0) * p.qty, 0);
+  const fitsWeight = totalWeight === 0 || totalWeight <= trailer.maxPayloadLb;
   const fits =
     layout.fits &&
     linearIn <= trailer.deckLength &&
     longest <= trailer.deckLength + trailer.maxOverhang &&
     widestNonCurb <= trailer.deckWidth &&
-    tallest <= trailer.maxHeight;
+    tallest <= trailer.maxHeight &&
+    fitsWeight;
   const deckArea = trailer.deckLength * trailer.deckWidth;
   const linearOverage = Math.max(0, linearIn - trailer.deckLength);
   const lengthOverage = Math.max(0, longest - trailer.deckLength - trailer.maxOverhang);
   const widthOverage = Math.max(0, widestNonCurb - trailer.deckWidth);
   const heightOverage = Math.max(0, tallest - trailer.maxHeight);
+  const weightOverage = Math.max(0, totalWeight - trailer.maxPayloadLb);
   const overageScore =
     layout.unplacedCount * 100_000 +
     linearOverage * 100 +
     lengthOverage * 100 +
     widthOverage * 500 +
     heightOverage * 500 +
+    weightOverage * 10 +
     layout.totalOverhangIn;
 
   return {
