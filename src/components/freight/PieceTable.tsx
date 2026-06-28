@@ -90,6 +90,17 @@ export function PieceTable({ pieces, onChange, onSaveToLibrary }: PieceTableProp
                   maxLength={120}
                   className="flex-1 bg-secondary px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-rule"
                 />
+                {onSaveToLibrary && (
+                  <button
+                    type="button"
+                    onClick={() => onSaveToLibrary(p)}
+                    aria-label="Save to library"
+                    title="Save to Unit Library"
+                    className="size-10 shrink-0 inline-flex items-center justify-center bg-secondary text-muted-foreground active:bg-primary active:text-primary-foreground"
+                  >
+                    <BookmarkPlus className="size-4" />
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => remove(p.id)}
