@@ -1244,16 +1244,44 @@ export function recommend(pieces: Piece[], options: RecommendOptions = {}): Reco
     notes.push("Add at least one piece to see a recommendation.");
   }
   const splitShipment = !best ? splitTwoTrucks(validPieces, maxCurbStack) ?? undefined : undefined;
+
+  // Weight-driven notes per candidate.
+  const allFailWeight =
+    candidates.length > 0 &&
+    candidates.every((c) => !c.fitsWeight) &&
+    totalWeightLb > 0;
+  for (const c of candidates) {
+    if (!c.fitsWeight && c.weightOverage > 0) {
+      notes.push(
+        `Weight exceeds ${c.trailer.shortName} payload limit (${Math.round(totalWeightLb).toLocaleString()}lb / ${c.trailer.maxPayloadLb.toLocaleString()}lb max). Consider splitting the load.`,
+      );
+    }
+  }
+
   if (!best && validPieces.length > 0) {
     if (splitShipment) {
       const [a, b] = splitShipment.trucks;
+      const why = allFailWeight
+        ? "Load too heavy for any single truck"
+        : "Order too large for one truck";
       notes.push(
-        `Order too large for one truck — recommend splitting across 2 trucks: ${a.trailer.name} + ${b.trailer.name}.`,
+        `${why} — recommend splitting across 2 trucks: ${a.trailer.name} + ${b.trailer.name}.`,
       );
     } else {
       notes.push("Load exceeds the largest standard equipment, even split across two trucks — specialized transport required.");
     }
   }
+
+  // If the best layout couldn't place every gasket pallet, surface it.
+  if (best && boxes.gasketPallets > 0) {
+    const placedPallets = best.layout.placements.filter(
+      (p) => p.item.kind === "gasket-pallet",
+    ).length;
+    if (placedPallets < boxes.gasketPallets) {
+      notes.push("Gasket pallets could not fit on the selected trailer. Ship separately.");
+    }
+  }
+
   if (boxes.fillerBoxes > 0) {
     notes.push(`${boxes.fillerBoxes} packing box${boxes.fillerBoxes === 1 ? "" : "es"} (36"x36"x24") estimated, stacked 2 high.`);
   }
