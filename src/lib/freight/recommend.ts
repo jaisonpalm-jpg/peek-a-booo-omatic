@@ -393,10 +393,18 @@ function buildDeckItems(
     });
   }
 
-  // Gasket pallets are an ACCESSORY — they ship alongside but do not drive
-  // trailer length sizing. Intentionally omitted from the deck layout so
-  // they don't inflate linear-ft or overhang figures.
-
+  // Gasket pallets — accessory freight, but participate in the deck layout
+  // so they show on the diagram. Each pallet is a 48"L × 40"W block ~101" tall.
+  for (let i = 0; i < boxes.gasketPallets; i++) {
+    items.push({
+      kind: "gasket-pallet",
+      label: `Gasket Pallet ×1`,
+      lengthIn: PALLET_L,
+      widthIn: PALLET_W,
+      heightIn: GASKET_PALLET_HEIGHT_IN,
+      units: 1,
+    });
+  }
 
 
   return items;
@@ -436,14 +444,29 @@ function packDeckLayout(
   const maxLen = trailer.deckLength + trailer.maxOverhang;
   const buffer = SEPARATION_IN;
 
+  // Weight-forward bias: within each strategy, heavier items break ties so
+  // they load toward the nose of the trailer (over the drive axles).
+  const wt = (it: DeckItem) => it.weightLb ?? 0;
   const sorted = [...items].sort((a, b) => {
     if (strategy === "shortest-first") {
-      return a.lengthIn - b.lengthIn || a.widthIn - b.widthIn;
+      return (
+        a.lengthIn - b.lengthIn ||
+        a.widthIn - b.widthIn ||
+        wt(b) - wt(a)
+      );
     }
     if (strategy === "widest-first") {
-      return b.widthIn - a.widthIn || b.lengthIn - a.lengthIn;
+      return (
+        b.widthIn - a.widthIn ||
+        b.lengthIn - a.lengthIn ||
+        wt(b) - wt(a)
+      );
     }
-    return b.lengthIn - a.lengthIn || b.widthIn - a.widthIn;
+    return (
+      b.lengthIn - a.lengthIn ||
+      b.widthIn - a.widthIn ||
+      wt(b) - wt(a)
+    );
   });
 
   let cursorX = 0;
