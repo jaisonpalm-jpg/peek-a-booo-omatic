@@ -44,6 +44,48 @@ export type Database = {
         }
         Relationships: []
       }
+      library_units: {
+        Row: {
+          category: string
+          created_at: string
+          height: number
+          id: string
+          insulated: boolean
+          length: number
+          name: string
+          notes: string | null
+          user_id: string
+          weight: number | null
+          width: number
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          height: number
+          id?: string
+          insulated?: boolean
+          length: number
+          name: string
+          notes?: string | null
+          user_id: string
+          weight?: number | null
+          width: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          height?: number
+          id?: string
+          insulated?: boolean
+          length?: number
+          name?: string
+          notes?: string | null
+          user_id?: string
+          weight?: number | null
+          width?: number
+        }
+        Relationships: []
+      }
       share_links: {
         Row: {
           created_at: string

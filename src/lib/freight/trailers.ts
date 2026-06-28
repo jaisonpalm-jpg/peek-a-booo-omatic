@@ -7,10 +7,11 @@ export const TRAILERS: TrailerSpec[] = [
     id: "box-16",
     name: "16' Box Truck",
     shortName: "Box 16'",
-    deckLength: 16 * 12, // 192"
-    deckWidth: 7.7 * 12, // ~92"
-    maxHeight: 7 * 12, // 84"
+    deckLength: 16 * 12,
+    deckWidth: 7.7 * 12,
+    maxHeight: 7 * 12,
     maxOverhang: 0,
+    maxPayloadLb: 12_500,
     enclosed: true,
     description: "Compact enclosed box. Ideal for short local loads under 16'.",
   },
@@ -18,10 +19,11 @@ export const TRAILERS: TrailerSpec[] = [
     id: "box-26",
     name: "26' Box Truck",
     shortName: "Box 26'",
-    deckLength: 26 * 12, // 312"
-    deckWidth: 8 * 12, // 96"
-    maxHeight: 8.5 * 12, // 102"
+    deckLength: 26 * 12,
+    deckWidth: 8 * 12,
+    maxHeight: 8.5 * 12,
     maxOverhang: 0,
+    maxPayloadLb: 20_000,
     enclosed: true,
     description: "Enclosed dry box. Ideal for sub-26' loads under 8'6\" tall.",
   },
@@ -29,10 +31,11 @@ export const TRAILERS: TrailerSpec[] = [
     id: "dryvan-53",
     name: "53' Dry Van",
     shortName: "53' Van",
-    deckLength: 53 * 12, // 636"
-    deckWidth: 8.5 * 12, // 102"
-    maxHeight: 9 * 12, // 108"
+    deckLength: 53 * 12,
+    deckWidth: 8.5 * 12,
+    maxHeight: 9 * 12,
     maxOverhang: 0,
+    maxPayloadLb: 44_000,
     enclosed: true,
     description: "Standard enclosed OTR van. 53' interior, ~9' tall.",
   },
@@ -40,10 +43,11 @@ export const TRAILERS: TrailerSpec[] = [
     id: "flatbed-48",
     name: "48' Flatbed",
     shortName: "48' Flat",
-    deckLength: 48 * 12, // 576"
-    deckWidth: 8.5 * 12, // 102"
-    maxHeight: 8.5 * 12, // 102" load height (deck 5' off ground, ~13'6" total)
-    maxOverhang: 4 * 12, // 4' legal rear overhang (federal default)
+    deckLength: 48 * 12,
+    deckWidth: 8.5 * 12,
+    maxHeight: 8.5 * 12,
+    maxOverhang: 4 * 12,
+    maxPayloadLb: 48_000,
     enclosed: false,
     description: "Open deck. Allows up to 4' rear overhang without permit.",
   },
@@ -51,10 +55,11 @@ export const TRAILERS: TrailerSpec[] = [
     id: "hotshot-40",
     name: "40' Hotshot",
     shortName: "Hotshot",
-    deckLength: 40 * 12, // 480" — typical gooseneck deck
-    deckWidth: 8.5 * 12, // 102"
-    maxHeight: 8.5 * 12, // 102" open load height
+    deckLength: 40 * 12,
+    deckWidth: 8.5 * 12,
+    maxHeight: 8.5 * 12,
     maxOverhang: 4 * 12,
+    maxPayloadLb: 16_500,
     enclosed: false,
     description: "Class-3/5 pickup with gooseneck. Fast LTL flatbed for sub-40' loads under ~16.5k lbs.",
   },
@@ -62,10 +67,11 @@ export const TRAILERS: TrailerSpec[] = [
     id: "conestoga-48",
     name: "48' Conestoga",
     shortName: "Conestoga",
-    deckLength: 48 * 12, // 576"
-    deckWidth: 8.5 * 12, // 102"
-    maxHeight: 8.17 * 12, // ~98" interior clearance under rolling tarp
+    deckLength: 48 * 12,
+    deckWidth: 8.5 * 12,
+    maxHeight: 8.17 * 12,
     maxOverhang: 4 * 12,
+    maxPayloadLb: 45_000,
     enclosed: false,
     description: "Flatbed with rolling tarp system. Weather protection without crane-load restrictions.",
   },
@@ -75,8 +81,9 @@ export const TRAILERS: TrailerSpec[] = [
     shortName: "Step Deck",
     deckLength: 53 * 12,
     deckWidth: 8.5 * 12,
-    maxHeight: 10 * 12, // 120" — drop deck allows ~10' load height
+    maxHeight: 10 * 12,
     maxOverhang: 4 * 12,
+    maxPayloadLb: 48_000,
     enclosed: false,
     description: "Drop deck for taller loads (~10' tall) without permits.",
   },
@@ -84,10 +91,11 @@ export const TRAILERS: TrailerSpec[] = [
     id: "doubledrop-48",
     name: "48' Double Drop",
     shortName: "Double Drop",
-    deckLength: 29 * 12, // 29' well
+    deckLength: 29 * 12,
     deckWidth: 8.5 * 12,
-    maxHeight: 11.5 * 12, // 138" — well allows ~11'6"
+    maxHeight: 11.5 * 12,
     maxOverhang: 4 * 12,
+    maxPayloadLb: 40_000,
     enclosed: false,
     description: "Deep well for very tall freight (up to 11'6\"). 29' well length.",
   },
@@ -97,8 +105,9 @@ export const TRAILERS: TrailerSpec[] = [
     shortName: "RGN",
     deckLength: 29 * 12,
     deckWidth: 8.5 * 12,
-    maxHeight: 12 * 12, // 144"
+    maxHeight: 12 * 12,
     maxOverhang: 4 * 12,
+    maxPayloadLb: 42_000,
     enclosed: false,
     description: "Removable gooseneck. Heaviest, tallest loads; drive-on capable.",
   },
