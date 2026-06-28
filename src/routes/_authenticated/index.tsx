@@ -1,20 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useMemo, useState } from "react";
-import { Download, LogOut, Link2, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Download, LogOut, Link2, Loader2, AlertTriangle, X } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import { PieceTable } from "@/components/freight/PieceTable";
 import { RecommendationPanel } from "@/components/freight/RecommendationPanel";
 import { ScanSheetButton } from "@/components/freight/ScanSheetButton";
 import { JobsSidebar } from "@/components/freight/JobsSidebar";
 import { ManualSplitConfigurator } from "@/components/freight/ManualSplitConfigurator";
 import { QuickAddPieces } from "@/components/freight/QuickAddPieces";
+import { UnitLibrary } from "@/components/freight/UnitLibrary";
 import { Link } from "@tanstack/react-router";
 import { Zap } from "lucide-react";
 
 import { recommend } from "@/lib/freight/recommend";
 import { exportLoadSummaryPdf } from "@/lib/freight/exportPdf";
 import { useJobs } from "@/lib/freight/jobsStore";
-import type { Piece } from "@/lib/freight/types";
+import type { LibraryUnit, Piece } from "@/lib/freight/types";
+import { saveLibraryUnit } from "@/lib/freight/unitLibrary";
 import { supabase } from "@/integrations/supabase/client";
 import { createShareLink } from "@/lib/share.functions";
 
